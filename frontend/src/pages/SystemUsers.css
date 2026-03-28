@@ -1,0 +1,103 @@
+/* System Users Page */
+.users-table-container {
+  overflow-x: auto;
+  border-radius: var(--radius);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.users-table th {
+  padding: 16px 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(0,0,0,0.02);
+}
+
+.dark .users-table th {
+  background: rgba(255,255,255,0.02);
+}
+
+.users-table td {
+  padding: 16px 20px;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.user-row {
+  transition: background-color 0.2s ease;
+}
+
+.user-row:hover {
+  background-color: rgba(0,0,0,0.015);
+}
+
+.dark .user-row:hover {
+  background-color: rgba(255,255,255,0.02);
+}
+
+.user-row:last-child td {
+  border-bottom: none;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-detail-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.user-detail-email {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.action-icon-btn:hover {
+  background: rgba(0,0,0,0.04);
+  color: var(--text-primary);
+}
+
+.action-icon-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}

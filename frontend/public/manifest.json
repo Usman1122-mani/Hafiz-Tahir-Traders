@@ -1,0 +1,9 @@
+{
+  "short_name": "Hafiz Tahir Traders",
+  "name": "Hafiz Tahir Traders Inventory Management",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

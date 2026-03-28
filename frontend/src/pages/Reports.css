@@ -1,0 +1,145 @@
+/* Reports Page Styles */
+.reports-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .reports-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.report-stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid #f1f5f9;
+}
+
+.report-stat-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.report-stat-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0 0 4px 0;
+}
+
+.report-stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+/* Tabs */
+.reports-tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.reports-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.report-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.report-tab-btn.active {
+  background: white;
+  color: #f59e0b;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.report-tab-btn:hover:not(.active) {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+/* Stock badges */
+.stock-badge {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.stock-low {
+  color: #ef4444;
+}
+
+.stock-ok {
+  color: #10b981;
+}
+
+/* Status pills */
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pill-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.pill-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pill-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Empty state */
+.reports-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #94a3b8;
+  gap: 12px;
+}
+
+.reports-empty p {
+  font-size: 0.95rem;
+  margin: 0;
+}
