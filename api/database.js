@@ -5,7 +5,11 @@ const db = mysql.createConnection({
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "1234##",
   database: process.env.DB_NAME || "inventory_system",
-  port: process.env.DB_PORT || 3307
+  port: process.env.DB_PORT || 3307,
+  ssl: {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: true
+  }
 });
 
 db.connect((err) => {
