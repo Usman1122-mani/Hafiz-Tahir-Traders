@@ -17,14 +17,15 @@ const corsOptions = {
   origin: "https://hafiz-tahir-traders-one.vercel.app",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: false,
+  credentials: true,
 };
 
 // 1. Enable CORS for all routes
 app.use(cors(corsOptions));
 
-// 2. Handle preflight requests for all routes
+// 2. Handle preflight requests for all routes (including /api/login)
 app.options(/.*/, cors(corsOptions));
+app.options("/api/login", cors(corsOptions)); 
 
 // 3. Parse JSON body
 app.use(express.json());
