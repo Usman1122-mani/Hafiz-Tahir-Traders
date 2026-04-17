@@ -13,10 +13,7 @@ const LowStock = () => {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
-=======
   const [sendingAlert, setSendingAlert] = useState(false);
->>>>>>> c99f2aa (gg)
 
   useEffect(() => {
     const fetchLowStock = async () => {
@@ -36,8 +33,6 @@ const LowStock = () => {
     fetchLowStock();
   }, []);
 
-<<<<<<< HEAD
-=======
   const handleSendAlert = async () => {
     setSendingAlert(true);
     try {
@@ -55,7 +50,6 @@ const LowStock = () => {
     }
   };
 
->>>>>>> c99f2aa (gg)
   const columns = [
     { header: t('id'), accessor: 'id' },
     { header: t('productName'), accessor: 'name', cell: (row) => row.name || 'Unnamed' },
@@ -95,11 +89,7 @@ const LowStock = () => {
 
   return (
     <div className="page-container">
-<<<<<<< HEAD
-      <header className="page-header">
-=======
       <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
->>>>>>> c99f2aa (gg)
         <div>
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AlertTriangle size={28} color="var(--danger)" />
@@ -107,8 +97,6 @@ const LowStock = () => {
           </h1>
           <p className="page-subtitle">{t('lowStockSubtitle')}</p>
         </div>
-<<<<<<< HEAD
-=======
         <button 
           onClick={handleSendAlert}
           disabled={sendingAlert || items.length === 0}
@@ -129,7 +117,6 @@ const LowStock = () => {
           {sendingAlert ? <Loader size={16} color="white" /> : <AlertTriangle size={16} />}
           {sendingAlert ? 'Sending...' : 'Send Twilio SMS Alert'}
         </button>
->>>>>>> c99f2aa (gg)
       </header>
 
       {loading ? (

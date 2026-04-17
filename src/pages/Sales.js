@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Package, Search, ShoppingCart, Plus, Minus, Trash2, User, CreditCard, Printer, DollarSign } from 'lucide-react';
+import { Package, Search, ShoppingCart, Plus } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
 import { Loader } from '../components/ui/Loader';
 import api from '../api/axios';
@@ -33,7 +33,7 @@ const Sales = () => {
   const [manualPaidAmount, setManualPaidAmount] = useState('');
 
   // References
-  const printRef = useRef();
+
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -64,6 +64,7 @@ const Sales = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, cart, paymentMethod, selectedCustomer]);
 
   const fetchData = async () => {

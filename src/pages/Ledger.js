@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, X, DollarSign, Eye } from 'lucide-react';
+import { X, DollarSign, Eye } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Table } from '../components/ui/Table';
 import { Button } from '../components/ui/Button';
 import { Loader } from '../components/ui/Loader';
-import { useTranslation } from '../context/LanguageContext';
+
 import api from '../api/axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +13,7 @@ import './Dashboard.css';
 import './Ledger.css';
 
 const Ledger = () => {
-  const { t } = useTranslation();
+
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);

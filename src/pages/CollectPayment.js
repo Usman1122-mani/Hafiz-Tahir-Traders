@@ -5,14 +5,14 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Loader } from '../components/ui/Loader';
-import { useTranslation } from '../context/LanguageContext';
+
 import api from '../api/axios';
 import { toast } from 'react-toastify';
 import './Dashboard.css';
 import './CollectPayment.css';
 
 const CollectPayment = () => {
-  const { t } = useTranslation();
+
   const navigate = useNavigate();
   const location = useLocation();
   const initialCustomerId = location.state?.customerId || '';
