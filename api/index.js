@@ -26,7 +26,7 @@ function verifyToken(req, res, next) {
   // Support token from headers OR query params (for browser testing)
   const authHeader = req.headers["authorization"];
   const queryToken = req.query.token;
-  
+
   let token = null;
   if (authHeader) {
     token = authHeader.split(" ")[1];
@@ -203,8 +203,8 @@ app.delete("/api/customers/:id", verifyToken, checkRole(["admin", "cashier"]), (
     if (err) {
       // Check for foreign key constraint error (e.g. customer has sales)
       if (err.code === "ER_ROW_IS_REFERENCED_2" || err.errno === 1451) {
-        return res.status(400).json({ 
-          message: "Cannot delete customer because they have sales history in the system." 
+        return res.status(400).json({
+          message: "Cannot delete customer because they have sales history in the system."
         });
       }
       return res.status(500).send(err);
@@ -267,7 +267,7 @@ app.delete("/api/purchases/:id", verifyToken, checkRole(["admin"]), (req, res) =
 // ================= SALES =================
 app.post("/api/sales", verifyToken, checkRole(["admin", "cashier"]), (req, res) => {
   const { customer_id, sale_date, total, payment_type, paid_amount } = req.body;
-  
+
   const paymentType = payment_type || 'Cash';
   const paidAmount = Number(paid_amount) || 0;
   const remainingAmount = total - paidAmount;
@@ -308,11 +308,11 @@ app.get("/api/sales", verifyToken, checkRole(["admin", "cashier", "manager"]), (
 // ================= LEDGER & PAYMENTS =================
 app.get("/api/customers/:id/ledger", verifyToken, checkRole(["admin", "cashier", "manager"]), (req, res) => {
   const customerId = req.params.id;
-  
+
   db.query("SELECT * FROM customers WHERE id = ?", [customerId], (err, custResult) => {
     if (err) return res.status(500).send(err);
     if (custResult.length === 0) return res.status(404).send("Customer not found");
-    
+
     const customer = custResult[0];
 
     db.query("SELECT * FROM sales WHERE customer_id = ? ORDER BY sale_date DESC, id DESC", [customerId], (err2, sales) => {
@@ -338,7 +338,7 @@ app.get("/api/customers/:id/ledger", verifyToken, checkRole(["admin", "cashier",
 
 app.post("/api/payments", verifyToken, checkRole(["admin", "cashier"]), (req, res) => {
   const { customer_id, amount_paid, payment_method } = req.body;
-  
+
   if (!customer_id || amount_paid <= 0) {
     return res.status(400).send("Invalid payment details");
   }
@@ -361,7 +361,7 @@ app.post("/api/payments", verifyToken, checkRole(["admin", "cashier"]), (req, re
         if (err3) return res.status(500).send(err3);
 
         let unassignedAmount = Number(amount_paid);
-        
+
         const processSales = async () => {
           for (let sale of sales) {
             if (unassignedAmount <= 0) break;
@@ -369,7 +369,7 @@ app.post("/api/payments", verifyToken, checkRole(["admin", "cashier"]), (req, re
             const rem = Number(sale.remaining_amount);
             const applied = Math.min(unassignedAmount, rem);
             unassignedAmount -= applied;
-            
+
             const newRem = rem - applied;
             const newStatus = newRem > 0 ? 'PARTIAL' : 'PAID';
 
@@ -511,10 +511,10 @@ app.use("/api", twilioRoutes);
 initCronJobs();
 
 // ================= SERVER =================
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(5000, () => {
-    console.log("Server running on port 5000");
-  });
-}
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 module.exports = app;

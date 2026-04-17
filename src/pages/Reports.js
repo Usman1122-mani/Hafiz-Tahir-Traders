@@ -42,7 +42,7 @@ const Reports = () => {
     setExportingInv(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/reports/inventory/csv', {
+      const response = await fetch('https://hafiz-tahir-traders-production.up.railway.app/api/reports/inventory/csv', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Export failed');
@@ -65,7 +65,7 @@ const Reports = () => {
     setExportingSales(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/reports/sales/csv', {
+      const response = await fetch('https://hafiz-tahir-traders-production.up.railway.app/api/reports/sales/csv', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Export failed');
