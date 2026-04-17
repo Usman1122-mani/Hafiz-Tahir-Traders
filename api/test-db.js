@@ -1,16 +1,23 @@
+/**
+ * test-db.js — Local debug script only. Never imported by the server.
+ * Run with: node test-db.js
+ */
 require('dotenv').config();
 const mysql = require("mysql2");
 
 const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT || 3306
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  port: Number(process.env.MYSQLPORT) || 3306,
 });
 
 db.connect((err) => {
-  if (err) throw err;
+  if (err) {
+    console.error("Connection error:", err.message);
+    return;
+  }
   db.query("SELECT * FROM users", (err, result) => {
     if (err) console.error("Users error", err);
     else console.log("Users:", result);

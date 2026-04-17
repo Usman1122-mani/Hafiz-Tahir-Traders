@@ -21,7 +21,7 @@ async function runMigration() {
       console.log("Added total_due to customers");
     } catch (err) {
       if (err.code === 'ER_DUP_FIELDNAME') console.log("total_due already exists in customers");
-      else throw err;
+      else { console.error("Migration error (total_due):", err.message); }
     }
 
     // 2. Add columns to sales
@@ -38,7 +38,7 @@ async function runMigration() {
         console.log(`Added column ${col.split(' ')[0]} to sales`);
       } catch (err) {
         if (err.code === 'ER_DUP_FIELDNAME') console.log(`Column ${col.split(' ')[0]} already exists in sales`);
-        else throw err;
+        else { console.error(`Migration error (${col.split(' ')[0]}):`, err.message); }
       }
     }
 
