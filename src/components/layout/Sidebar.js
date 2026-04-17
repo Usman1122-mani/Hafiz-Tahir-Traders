@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, Package, ShoppingCart, ClipboardList, 
-  Truck, Users, AlertTriangle, FileText, LogOut, Shield 
+  Truck, Users, AlertTriangle, FileText, LogOut, Shield, DollarSign
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useTranslation } from '../../context/LanguageContext';
@@ -20,6 +20,8 @@ const Sidebar = () => {
     { name: t('purchases'), path: '/purchases', icon: <ClipboardList size={20} />, roles: ['admin', 'manager'] },
     { name: t('suppliers'), path: '/suppliers', icon: <Truck size={20} />, roles: ['admin', 'manager'] },
     { name: t('customers'), path: '/customers', icon: <Users size={20} />, roles: ['admin', 'manager', 'cashier'] },
+    { name: 'Khata / Ledger', path: '/ledger', icon: <FileText size={20} />, roles: ['admin', 'manager', 'cashier'] },
+    { name: 'Collect Payment', path: '/collect-payment', icon: <DollarSign size={20} />, roles: ['admin', 'manager', 'cashier'] },
     { name: t('lowStock'), path: '/low-stock', icon: <AlertTriangle size={20} />, roles: ['admin', 'manager'] },
     { name: t('reports'), path: '/reports', icon: <FileText size={20} />, roles: ['admin', 'manager'] },
     { name: t('systemUsers'), path: '/system-users', icon: <Shield size={20} />, roles: ['admin'] },

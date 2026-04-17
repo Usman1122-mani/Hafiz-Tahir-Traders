@@ -18,6 +18,8 @@ import Purchases from './pages/Purchases';
 import Reports from './pages/Reports';
 import LowStock from './pages/LowStock';
 import SystemUsers from './pages/SystemUsers';
+import Ledger from './pages/Ledger';
+import CollectPayment from './pages/CollectPayment';
 
 // --- Protected Route Helper ---
 const ProtectedRoute = ({ children, roles }) => {
@@ -51,6 +53,8 @@ function App() {
               <Route path="/products" element={<Products />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/customers" element={<Customers />} />
+              <Route path="/ledger" element={<Ledger />} />
+              <Route path="/collect-payment" element={<CollectPayment />} />
               
               {/* Manager & Admin Only */}
               <Route path="/purchases" element={<ProtectedRoute roles={['admin', 'manager']}><Purchases /></ProtectedRoute>} />

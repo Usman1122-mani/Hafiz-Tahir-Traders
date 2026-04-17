@@ -4,6 +4,15 @@ import { useTranslation } from '../context/LanguageContext';
 import { Loader } from '../components/ui/Loader';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
+import { AnimatePresence, motion } from 'framer-motion';
+
+import CompactOrderItem from '../components/pos/CompactOrderItem';
+import CustomerHeader from '../components/pos/CustomerHeader';
+import PaymentSection from '../components/pos/PaymentSection';
+import OrderSummary from '../components/pos/OrderSummary';
+import StepIndicator from '../components/pos/StepIndicator';
+import ConfirmationModal from '../components/pos/ConfirmationModal';
+
 import './Sales.css';
 
 const Sales = () => {
@@ -13,6 +22,7 @@ const Sales = () => {
   const [loading, setLoading] = useState(true);
   
   // POS State
+  const [currentStep, setCurrentStep] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -20,13 +30,41 @@ const Sales = () => {
   const [discountValue, setDiscountValue] = useState(0);
   const [discountType, setDiscountType] = useState('percentage'); // 'percentage' or 'fixed'
   const [submitting, setSubmitting] = useState(false);
+  const [manualPaidAmount, setManualPaidAmount] = useState('');
 
-  // References for printing
+  // References
   const printRef = useRef();
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     fetchData();
+    setTimeout(() => {
+      if (searchInputRef.current) searchInputRef.current.focus();
+    }, 100);
   }, []);
+
+  // Keyboard Navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // If modal is open (step 3), ignore keyboard from here, let modal handle it via auto-focus
+      if (currentStep === 3) return;
+
+      if (e.key === 'Enter') {
+        if (currentStep === 1 && cart.length > 0) {
+          setCurrentStep(2);
+        } else if (currentStep === 2) {
+          handleNextToConfirm();
+        }
+      }
+      
+      if (e.key === 'Escape' && currentStep === 2) {
+        setCurrentStep(1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentStep, cart, paymentMethod, selectedCustomer]);
 
   const fetchData = async () => {
     try {
@@ -35,7 +73,6 @@ const Sales = () => {
         api.get('/customers')
       ]);
       setProducts(productsRes.data);
-      // Filter out 'Walk-in' from the database list if it exists to avoid duplicate with hardcoded one
       const manualCustomers = customersRes.data.filter(c => 
         c.name?.toLowerCase() !== 'walk-in customer' && 
         c.name?.toLowerCase() !== 'walk-in'
@@ -81,7 +118,7 @@ const Sales = () => {
         const stockAvailable = item.stock !== undefined ? item.stock : item.quantity;
         const newQty = item.cartQty + delta;
         
-        if (newQty < 1) return item; // Don't go below 1, use remove instead
+        if (newQty < 1) return item; 
         if (newQty > stockAvailable) {
           toast.warning(`Only ${stockAvailable} items available!`);
           return item;
@@ -102,29 +139,40 @@ const Sales = () => {
     : Number(discountValue);
   const cartTotal = Math.max(0, subtotal - discountAmount);
 
-  const handleCompleteSale = async () => {
-    if (cart.length === 0) {
-      toast.error('Cart is empty!');
+  const handleNextToConfirm = () => {
+    if ((paymentMethod === 'Partial' || paymentMethod === 'Credit') && !selectedCustomer) {
+      toast.error('Customer is mandatory for Partial or Credit sales!');
       return;
+    }
+    if (paymentMethod === 'Partial' && Number(manualPaidAmount) >= cartTotal) {
+      toast.warning('Paid amount should be strictly less than total. Use Cash if paying in full.');
+      return;
+    }
+    setCurrentStep(3);
+  };
+
+  const handleCompleteSale = async () => {
+    let finalPaidAmount = cartTotal;
+    if (paymentMethod === 'Partial') {
+      finalPaidAmount = Number(manualPaidAmount) || 0;
+    } else if (paymentMethod === 'Credit') {
+      finalPaidAmount = 0;
     }
 
     setSubmitting(true);
     try {
-      // Create Sale Record
       await api.post('/sales', {
         customer_id: selectedCustomer || null,
         sale_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        total: cartTotal
+        total: cartTotal,
+        payment_type: paymentMethod,
+        paid_amount: finalPaidAmount
       });
 
-      // Optional: Deduct stock from products using PUT /api/products/:id
-      // (Since /api/sales only stores totals in the current backend schema)
       for (const item of cart) {
         const id = item.id || item._id;
         const currentStock = item.stock !== undefined ? item.stock : item.quantity;
         const newStock = currentStock - item.cartQty;
-        
-        // Make put request to update stock
         await api.put(`/products/${id}`, {
           ...item,
           quantity: newStock,
@@ -134,11 +182,11 @@ const Sales = () => {
 
       toast.success('Sale completed successfully!');
       
-      // Print Receipt automatically
       handlePrint();
 
-      // Clear cart & refresh products
+      // Reset
       setCart([]);
+      setCurrentStep(1);
       fetchData();
     } catch (error) {
       console.error(error);
@@ -150,7 +198,6 @@ const Sales = () => {
 
   const handlePrint = () => {
     if (cart.length === 0) {
-      toast.warning('Cart is empty. Add items to print receipt.');
       return;
     }
     window.print();
@@ -160,212 +207,226 @@ const Sales = () => {
 
   return (
     <>
-      <div className="pos-container no-print">
+      <div className="pos-master-wrapper no-print">
+        <StepIndicator currentStep={currentStep} />
         
-        {/* Left Side: Products Grid */}
-        <div className="pos-left">
-          <div className="pos-header">
-            <h1 className="pos-title">
-              <Package size={24} color="var(--accent-primary)" />
-              {t('products') || 'Products'}
-            </h1>
-            <div className="pos-search">
-              <Search size={18} className="search-icon" />
-              <input 
-                type="text" 
-                placeholder="Search products..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="products-table-container">
-            <table className="products-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '40%' }}>{t('productName') || 'Product Name'}</th>
-                  <th style={{ width: '15%' }}>{t('stock') || 'Stock'}</th>
-                  <th style={{ width: '25%' }}>{t('price') || 'Price'}</th>
-                  <th style={{ width: '20%', textAlign: 'center' }}>{t('action') || 'Action'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map(product => {
-                  const stock = product.stock !== undefined ? product.stock : product.quantity;
-                  const price = product.price || 0;
-                  const isLowStock = stock <= 5 && stock > 0;
-                  const isOutOfStock = stock <= 0;
-
-                  return (
-                    <tr 
-                      key={product.id || product._id} 
-                      className={`product-row ${isOutOfStock ? 'out-of-stock' : ''}`}
-                      onClick={() => !isOutOfStock && addToCart(product)}
-                    >
-                      <td>
-                        <div className="product-name-cell">
-                          <span className="product-name-text">{product.name}</span>
-                          {isLowStock && <span className="badge badge-warning">Low Stock</span>}
-                          {isOutOfStock && <span className="badge badge-danger">Out of Stock</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`stock-level ${isLowStock ? 'text-warning' : isOutOfStock ? 'text-danger' : 'text-success'}`}>
-                          {stock}
-                        </span>
-                      </td>
-                      <td className="price-cell">
-                        Rs. {Number(price).toLocaleString()}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button 
-                          className="add-to-cart-btn" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(product);
-                          }}
-                          disabled={isOutOfStock}
-                          title={isOutOfStock ? 'Out of Stock' : 'Add to Order'}
-                        >
-                          <Plus size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {filteredProducts.length === 0 && (
-              <div className="no-results">
-                <Search size={40} style={{ opacity: 0.1, marginBottom: '10px' }} />
-                <p>No products found matching "{searchQuery}"</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Side: Cart Sidebar */}
-        <div className="pos-sidebar">
-          <div className="cart-header">
-            <h3><ShoppingCart size={20} /> Current Order</h3>
-            <span className="cart-badge">{cart.reduce((a, b) => a + b.cartQty, 0)} items</span>
-          </div>
-
-          <div className="cart-items">
-            {cart.length === 0 ? (
-              <div className="cart-empty">
-                <ShoppingCart size={48} style={{ opacity: 0.2, margin: '0 auto 10px' }} />
-                <p>Select products to add to cart</p>
-              </div>
-            ) : (
-              cart.map(item => (
-                <div key={item.id || item._id} className="cart-item">
-                  <div className="cart-item-top">
-                    <span>{item.name}</span>
+        <div className="pos-container">
+          
+          <AnimatePresence mode="wait">
+            {currentStep === 1 && (
+              <motion.div 
+                key="step1"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="pos-left"
+              >
+                <div className="pos-header">
+                  <h1 className="pos-title">
+                    <Package size={24} color="var(--accent-primary)" />
+                    {t('products') || 'Products'}
+                  </h1>
+                  <div className="pos-search">
+                    <Search size={18} className="search-icon" />
+                    <input 
+                      ref={searchInputRef}
+                      type="text" 
+                      placeholder="Search products..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
-                  <div className="cart-item-bottom">
-                    <span className="cart-item-price">Rs. {((item.price || 0) * item.cartQty).toLocaleString()}</span>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <div className="qty-control">
-                        <button className="qty-btn" onClick={() => updateCartQty(item.id || item._id, -1)}><Minus size={14}/></button>
-                        <span className="qty-val">{item.cartQty}</span>
-                        <button className="qty-btn" onClick={() => updateCartQty(item.id || item._id, 1)}><Plus size={14}/></button>
+                </div>
+
+                <div className="products-table-container">
+                  <table className="products-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40%' }}>{t('productName') || 'Product Name'}</th>
+                        <th style={{ width: '15%' }}>{t('stock') || 'Stock'}</th>
+                        <th style={{ width: '25%' }}>{t('price') || 'Price'}</th>
+                        <th style={{ width: '20%', textAlign: 'center' }}>{t('action') || 'Action'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.map(product => {
+                        const stock = product.stock !== undefined ? product.stock : product.quantity;
+                        const price = product.price || 0;
+                        const isLowStock = stock <= 5 && stock > 0;
+                        const isOutOfStock = stock <= 0;
+
+                        return (
+                          <tr 
+                            key={product.id || product._id} 
+                            className={`product-row ${isOutOfStock ? 'out-of-stock' : ''}`}
+                            onClick={() => !isOutOfStock && addToCart(product)}
+                          >
+                            <td>
+                              <div className="product-name-cell">
+                                <span className="product-name-text">{product.name}</span>
+                                {isLowStock && <span className="badge badge-warning">Low Stock</span>}
+                                {isOutOfStock && <span className="badge badge-danger">Out of Stock</span>}
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`stock-level ${isLowStock ? 'text-warning' : isOutOfStock ? 'text-danger' : 'text-success'}`}>
+                                {stock}
+                              </span>
+                            </td>
+                            <td className="price-cell">
+                              Rs. {Number(price).toLocaleString()}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button 
+                                className="add-to-cart-btn" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addToCart(product);
+                                }}
+                                disabled={isOutOfStock}
+                                title={isOutOfStock ? 'Out of Stock' : 'Add to Order'}
+                              >
+                                <Plus size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {filteredProducts.length === 0 && (
+                    <div className="no-results">
+                      <Search size={40} style={{ opacity: 0.1, marginBottom: '10px' }} />
+                      <p>No products found matching "{searchQuery}"</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {currentStep >= 2 && (
+              <motion.div 
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="pos-payment-step"
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h2 style={{margin: 0, fontSize: '1.4rem'}}>Payment Setup</h2>
+                  <button 
+                    onClick={() => setCurrentStep(1)}
+                    className="pos-back-btn"
+                  >
+                    🔙 Back to Products
+                  </button>
+                </div>
+
+                <CustomerHeader 
+                  customers={customers}
+                  selectedCustomerId={selectedCustomer}
+                  onSelect={setSelectedCustomer}
+                />
+
+                <div style={{ marginTop: '20px' }}>
+                  <PaymentSection 
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    manualPaidAmount={manualPaidAmount}
+                    setManualPaidAmount={setManualPaidAmount}
+                    cartTotal={cartTotal}
+                  />
+                </div>
+
+                <div style={{ marginTop: '20px' }}>
+                  <div className="pos-payment-section">
+                    <label className="pos-section-label">Discount & Extras</label>
+                    <div className="discount-input-group">
+                      <input 
+                        type="number" 
+                        className="discount-input" 
+                        value={discountValue} 
+                        onChange={(e) => setDiscountValue(e.target.value)}
+                        placeholder="0"
+                        min="0"
+                      />
+                      <div className="discount-type-toggle">
+                        <button 
+                          className={`type-btn ${discountType === 'percentage' ? 'active' : ''}`}
+                          onClick={() => setDiscountType('percentage')}
+                        >%</button>
+                        <button 
+                          className={`type-btn ${discountType === 'fixed' ? 'active' : ''}`}
+                          onClick={() => setDiscountType('fixed')}
+                        >Rs</button>
                       </div>
-                      <button className="remove-btn" onClick={() => removeFromCart(item.id || item._id)}>
-                        <Trash2 size={16} />
-                      </button>
                     </div>
                   </div>
                 </div>
-              ))
+
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
 
-          <div className="cart-footer">
-            <div className="settings-group">
-              <label className="settings-label"><User size={14} /> Customer (Optional)</label>
-              <select 
-                className="customer-select" 
-                value={selectedCustomer}
-                onChange={(e) => setSelectedCustomer(e.target.value)}
-              >
-                <option value="">Walk-in Customer</option>
-                {customers.map(c => (
-                  <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
-                ))}
-              </select>
+          {/* Right Side: Cart Sidebar (Always Visible) */}
+          <div className="pos-sidebar">
+            <div className="pos-cart-header">
+              <h3>Current Order ({cart.reduce((a, b) => a + b.cartQty, 0)} items)</h3>
             </div>
-
-            <div className="settings-group">
-              <label className="settings-label"><CreditCard size={14} /> Payment Method</label>
-              <div className="payment-methods">
-                {['Cash', 'Card', 'Online'].map(method => (
-                  <div 
-                    key={method}
-                    className={`payment-method ${paymentMethod === method ? 'active' : ''}`}
-                    onClick={() => setPaymentMethod(method)}
-                  >
-                    {method}
+            <div className="pos-cart-list">
+              <AnimatePresence>
+                {cart.length === 0 ? (
+                  <div className="cart-empty-state">
+                    <ShoppingCart size={48} className="empty-icon" />
+                    <p>👉 No products added</p>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  cart.map(item => (
+                    <CompactOrderItem 
+                      key={item.id || item._id}
+                      item={item}
+                      onIncrease={id => updateCartQty(id, 1)}
+                      onDecrease={id => updateCartQty(id, -1)}
+                      onRemove={removeFromCart}
+                    />
+                  ))
+                )}
+              </AnimatePresence>
             </div>
 
-            <div className="settings-group">
-              <label className="settings-label"><DollarSign size={14} /> Discount</label>
-              <div className="discount-input-group">
-                <input 
-                  type="number" 
-                  className="discount-input" 
-                  value={discountValue} 
-                  onChange={(e) => setDiscountValue(e.target.value)}
-                  placeholder="0"
-                  min="0"
-                />
-                <div className="discount-type-toggle">
-                  <button 
-                    className={`type-btn ${discountType === 'percentage' ? 'active' : ''}`}
-                    onClick={() => setDiscountType('percentage')}
-                  >%</button>
-                  <button 
-                    className={`type-btn ${discountType === 'fixed' ? 'active' : ''}`}
-                    onClick={() => setDiscountType('fixed')}
-                  >Rs</button>
-                </div>
-              </div>
-            </div>
-
-            <div className="cart-summary">
-              <div className="summary-row">
-                <span>Subtotal:</span>
-                <span>Rs. {subtotal.toLocaleString()}</span>
-              </div>
-              <div className="summary-row discount">
-                <span>Discount:</span>
-                <span>- Rs. {discountAmount.toLocaleString()}</span>
-              </div>
-              <div className="cart-total">
-                <span>Total:</span>
-                <span>Rs. {cartTotal.toLocaleString()}</span>
-              </div>
-            </div>
-
-            <div className="checkout-actions">
-              <button className="print-receipt-btn" onClick={handlePrint} title="Print Receipt">
-                <Printer size={20} />
-              </button>
-              <button 
-                className="complete-sale-btn" 
-                onClick={handleCompleteSale}
-                disabled={submitting || cart.length === 0}
-              >
-                {submitting ? <Loader /> : 'Complete Sale'}
-              </button>
+            <div className="pos-cart-footer">
+              <OrderSummary 
+                subtotal={subtotal}
+                discountAmount={discountAmount}
+                cartTotal={cartTotal}
+                paymentMethod={paymentMethod}
+                manualPaidAmount={manualPaidAmount}
+                currentStep={currentStep}
+                onNextStep={currentStep === 1 ? () => setCurrentStep(2) : handleNextToConfirm}
+                submitting={submitting}
+                cartLength={cart.length}
+              />
             </div>
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {currentStep === 3 && (
+          <ConfirmationModal 
+            cart={cart}
+            cartTotal={cartTotal}
+            paymentMethod={paymentMethod}
+            manualPaidAmount={manualPaidAmount}
+            selectedCustomerName={selectedCustomer ? customers.find(c => (c.id || c._id)?.toString() === selectedCustomer)?.name : ''}
+            onConfirm={handleCompleteSale}
+            onCancel={() => setCurrentStep(2)}
+            submitting={submitting}
+          />
+        )}
+      </AnimatePresence>
 
       {/* --- Print Only Receipt Component --- */}
       <div id="receipt">
@@ -411,6 +472,24 @@ const Sales = () => {
             <span>TOTAL:</span>
             <span>Rs. {cartTotal.toLocaleString()}</span>
           </div>
+          {paymentMethod === 'Partial' && (
+            <>
+              <div className="print-total-row">
+                <span>Paid Amount:</span>
+                <span>Rs. {Number(manualPaidAmount || 0).toLocaleString()}</span>
+              </div>
+              <div className="print-total-row">
+                <span>Remaining Due:</span>
+                <span>Rs. {Math.max(0, cartTotal - Number(manualPaidAmount || 0)).toLocaleString()}</span>
+              </div>
+            </>
+          )}
+          {paymentMethod === 'Credit' && (
+            <div className="print-total-row">
+              <span>Amount Due:</span>
+              <span>Rs. {cartTotal.toLocaleString()}</span>
+            </div>
+          )}
         </div>
 
         <div className="print-footer">

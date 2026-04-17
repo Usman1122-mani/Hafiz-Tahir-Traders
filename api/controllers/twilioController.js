@@ -25,9 +25,9 @@ const sendLowStockAlert = async (req, res = null) => {
     // 1. Fetch products where quantity is less than min_stock
     // We handle the edge case where stock might be named quantity or stock.
     const query = `
-      SELECT id, name, COALESCE(stock, quantity) as current_qty, min_stock, last_alert_sent 
+      SELECT id, name, quantity as current_qty, min_stock, last_alert_sent 
       FROM products 
-      WHERE COALESCE(stock, quantity) < min_stock
+      WHERE quantity < min_stock
     `;
 
     db.query(query, async (err, products) => {
@@ -77,7 +77,7 @@ const sendLowStockAlert = async (req, res = null) => {
         const idsToUpdate = itemsToAlert.map(i => i.id);
         const updateSql = `UPDATE products SET last_alert_sent = NOW() WHERE id IN (?)`;
         
-        db.query(updateSql, [idsToUpdate], (updateErr) => {
+        db.query(updateSql, [[idsToUpdate]], (updateErr) => {
           if (updateErr) {
             console.error("Failed to update last_alert_sent:", updateErr);
             // It still sent the SMS, we just failed to log it, but we return success.

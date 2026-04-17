@@ -272,18 +272,124 @@ app.delete("/api/purchases/:id", verifyToken, checkRole(["admin"]), (req, res) =
 
 // ================= SALES =================
 app.post("/api/sales", verifyToken, checkRole(["admin", "cashier"]), (req, res) => {
-  const { customer_id, sale_date, total } = req.body;
-  const sql = "INSERT INTO sales (customer_id, sale_date, total) VALUES (?, ?, ?)";
-  db.query(sql, [customer_id, sale_date, total], (err) => {
+  const { customer_id, sale_date, total, payment_type, paid_amount } = req.body;
+  
+  const paymentType = payment_type || 'Cash';
+  const paidAmount = Number(paid_amount) || 0;
+  const remainingAmount = total - paidAmount;
+  let status = 'PAID';
+  if (remainingAmount > 0) status = 'PARTIAL';
+  if (paidAmount === 0) status = 'UNPAID';
+
+  const sql = "INSERT INTO sales (customer_id, sale_date, total, paid_amount, remaining_amount, payment_type, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
+  db.query(sql, [customer_id || null, sale_date, total, paidAmount, remainingAmount, paymentType, status], (err, result) => {
     if (err) return res.status(500).send(err);
+    const saleId = result.insertId;
+
+    if (customer_id && remainingAmount > 0) {
+      const updateDueSql = "UPDATE customers SET total_due = total_due + ? WHERE id = ?";
+      db.query(updateDueSql, [remainingAmount, customer_id], (err2) => {
+        if (err2) console.error("Error updating customer due:", err2);
+      });
+    }
+
+    if (customer_id && paidAmount > 0) {
+      const paymentSql = "INSERT INTO payments (sale_id, customer_id, amount_paid, payment_method, payment_date) VALUES (?, ?, ?, ?, ?)";
+      db.query(paymentSql, [saleId, customer_id, paidAmount, paymentType, sale_date], (err3) => {
+        if (err3) console.error("Error inserting initial payment:", err3);
+      });
+    }
+
     res.send("Sale Added Successfully");
   });
 });
 
 app.get("/api/sales", verifyToken, checkRole(["admin", "cashier", "manager"]), (req, res) => {
-  db.query("SELECT * FROM sales", (err, result) => {
+  db.query("SELECT * FROM sales ORDER BY id DESC", (err, result) => {
     if (err) return res.status(500).send(err);
     res.json(result);
+  });
+});
+
+// ================= LEDGER & PAYMENTS =================
+app.get("/api/customers/:id/ledger", verifyToken, checkRole(["admin", "cashier", "manager"]), (req, res) => {
+  const customerId = req.params.id;
+  
+  db.query("SELECT * FROM customers WHERE id = ?", [customerId], (err, custResult) => {
+    if (err) return res.status(500).send(err);
+    if (custResult.length === 0) return res.status(404).send("Customer not found");
+    
+    const customer = custResult[0];
+
+    db.query("SELECT * FROM sales WHERE customer_id = ? ORDER BY sale_date DESC, id DESC", [customerId], (err2, sales) => {
+      if (err2) return res.status(500).send(err2);
+
+      db.query("SELECT * FROM payments WHERE customer_id = ? ORDER BY payment_date DESC, id DESC", [customerId], (err3, payments) => {
+        if (err3) return res.status(500).send(err3);
+
+        const totalPurchases = sales.reduce((sum, s) => sum + Number(s.total), 0);
+        const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount_paid), 0);
+
+        res.json({
+          customer,
+          totalPurchases,
+          totalPaid,
+          sales,
+          payments
+        });
+      });
+    });
+  });
+});
+
+app.post("/api/payments", verifyToken, checkRole(["admin", "cashier"]), (req, res) => {
+  const { customer_id, amount_paid, payment_method } = req.body;
+  
+  if (!customer_id || amount_paid <= 0) {
+    return res.status(400).send("Invalid payment details");
+  }
+
+  const paymentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  // Insert payment record
+  const insertPaymentSql = "INSERT INTO payments (customer_id, amount_paid, payment_method, payment_date) VALUES (?, ?, ?, ?)";
+  db.query(insertPaymentSql, [customer_id, amount_paid, payment_method || 'Cash', paymentDate], (err1) => {
+    if (err1) return res.status(500).send(err1);
+
+    // Decrease customer total_due
+    const updateDueSql = "UPDATE customers SET total_due = total_due - ? WHERE id = ?";
+    db.query(updateDueSql, [amount_paid, customer_id], (err2) => {
+      if (err2) return res.status(500).send(err2);
+
+      // FIFO Logic to clear remaining_amount on unpaid/partial sales
+      const getSalesSql = "SELECT id, remaining_amount FROM sales WHERE customer_id = ? AND remaining_amount > 0 ORDER BY id ASC";
+      db.query(getSalesSql, [customer_id], (err3, sales) => {
+        if (err3) return res.status(500).send(err3);
+
+        let unassignedAmount = Number(amount_paid);
+        
+        const processSales = async () => {
+          for (let sale of sales) {
+            if (unassignedAmount <= 0) break;
+
+            const rem = Number(sale.remaining_amount);
+            const applied = Math.min(unassignedAmount, rem);
+            unassignedAmount -= applied;
+            
+            const newRem = rem - applied;
+            const newStatus = newRem > 0 ? 'PARTIAL' : 'PAID';
+
+            await db.promise().query("UPDATE sales SET paid_amount = paid_amount + ?, remaining_amount = ?, status = ? WHERE id = ?", [applied, newRem, newStatus, sale.id]);
+          }
+          res.json({ message: "Payment processed successfully" });
+        };
+
+        processSales().catch(err => {
+          console.error("Error in FIFO sales update:", err);
+          res.status(500).send("Partial failure during sales update");
+        });
+      });
+    });
   });
 });
 

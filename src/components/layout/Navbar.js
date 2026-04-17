@@ -14,6 +14,7 @@ const Navbar = () => {
   const { lang, toggleLang, t } = useTranslation();
   const [showNotif, setShowNotif] = useState(false);
   const [lowStockItems, setLowStockItems] = useState([]);
+  const [sendingAlert, setSendingAlert] = useState(false);
   const notifRef = useRef(null);
 
   const initials = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
@@ -44,8 +45,21 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSendAlert = () => {
-    toast.info('SMS Alert feature coming soon!');
+  const handleSendAlert = async () => {
+    setSendingAlert(true);
+    try {
+      const res = await api.post('/send-sms-alert');
+      if (res.data && res.data.message) {
+        toast.success(res.data.message);
+      } else {
+        toast.success('SMS Alert request sent successfully!');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send SMS Alert.');
+      console.error(err);
+    } finally {
+      setSendingAlert(false);
+    }
   };
 
   return (
@@ -126,9 +140,9 @@ const Navbar = () => {
                   )}
                 </div>
 
-                <button className="notif-sms-btn" onClick={handleSendAlert}>
+                <button className="notif-sms-btn" onClick={handleSendAlert} disabled={sendingAlert} style={{ opacity: sendingAlert ? 0.7 : 1 }}>
                   <Send size={16} />
-                  {t('sendSmsAlert')}
+                  {sendingAlert ? (t('sending') || 'Sending...') : t('sendSmsAlert')}
                 </button>
               </motion.div>
             )}
