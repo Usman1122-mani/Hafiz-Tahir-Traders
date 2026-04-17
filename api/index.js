@@ -12,8 +12,16 @@ const app = express();
 // 🔐 Secret Key
 const SECRET_KEY = process.env.JWT_SECRET || "mysecret123";
 
-// Fix CORS
-app.use(cors());
+// ================= CORS =================
+const corsOptions = {
+  origin: "https://hafiz-tahir-traders-one.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // Handle preflight requests
+
 app.use(express.json());
 
 // ================= ROOT =================
