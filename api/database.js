@@ -56,6 +56,18 @@ createConnection();
 
 // Proxy export — all callers always get the live connection object
 module.exports = {
-  query: (...args) => db.query(...args),
-  promise: () => db.promise(),
+  query: (...args) => {
+    if (!db) {
+      const callback = args[args.length - 1];
+      if (typeof callback === 'function') {
+        return callback(new Error("Database connection not initialized"));
+      }
+      return Promise.reject(new Error("Database connection not initialized"));
+    }
+    return db.query(...args);
+  },
+  promise: () => {
+    if (!db) return { query: () => Promise.reject(new Error("Database connection not initialized")) };
+    return db.promise();
+  },
 };

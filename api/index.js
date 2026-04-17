@@ -20,14 +20,32 @@ const corsOptions = {
   credentials: true,
 };
 
-// 1. Enable CORS for all routes
 app.use(cors(corsOptions));
 
-// 2. Handle preflight requests for all routes (including /api/login)
-app.options(/.*/, cors(corsOptions));
-app.options("/api/login", cors(corsOptions)); 
+// Explicit preflight handler for /api/login - MUST be above routes
+app.options("/api/login", (req, res) => {
+  res.header("Access-Control-Allow-Origin", "https://hafiz-tahir-traders-one.vercel.app");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  return res.sendStatus(204);
+});
 
-// 3. Parse JSON body
+// Handle preflight for all other routes
+app.options(/.*/, cors(corsOptions));
+
+// OPTIONS bypass middleware - Ensures every preflight gets a 204
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Origin", "https://hafiz-tahir-traders-one.vercel.app");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 app.use(express.json());
 
 
@@ -35,6 +53,11 @@ app.use(express.json());
 // ================= ROOT =================
 app.get("/", (req, res) => {
   res.send("Inventory System Backend Running");
+});
+
+// ================= TEST ROUTE =================
+app.get("/api/test", (req, res) => {
+  res.json({ status: "ok", message: "API is reachable" });
 });
 
 // ================= JWT MIDDLEWARE =================
@@ -74,29 +97,37 @@ const checkRole = (roles) => {
 
 // ================= LOGIN =================
 app.post("/api/login", (req, res) => {
-  const { email, password } = req.body;
-  const sql = "SELECT * FROM users WHERE email=? AND password=?";
+  try {
+    const { email, password } = req.body;
+    const sql = "SELECT * FROM users WHERE email=? AND password=?";
 
-  db.query(sql, [email, password], (err, result) => {
-    if (err) return res.status(500).send(err);
+    db.query(sql, [email, password], (err, result) => {
+      if (err) {
+        console.error("Login DB Error:", err);
+        return res.status(500).json({ error: "Database error during login", details: err.message });
+      }
 
-    if (result.length > 0) {
-      const user = result[0];
-      const token = jwt.sign(
-        { id: user.id, role: user.role },
-        SECRET_KEY,
-        { expiresIn: "10h" } // Extended for easier testing
-      );
+      if (result && result.length > 0) {
+        const user = result[0];
+        const token = jwt.sign(
+          { id: user.id, role: user.role },
+          SECRET_KEY,
+          { expiresIn: "10h" }
+        );
 
-      res.json({
-        message: "Login Successful",
-        token,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role }
-      });
-    } else {
-      res.status(401).send("Invalid Email or Password");
-    }
-  });
+        res.json({
+          message: "Login Successful",
+          token,
+          user: { id: user.id, name: user.name, email: user.email, role: user.role }
+        });
+      } else {
+        res.status(401).json({ message: "Invalid Email or Password" });
+      }
+    });
+  } catch (err) {
+    console.error("Login Crash Prevention:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
+  }
 });
 
 // ================= CATEGORY =================
