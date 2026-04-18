@@ -106,7 +106,7 @@ app.post("/api/login", (req, res) => {
 
   // 2. Query execution with detailed error logging
   const sql = "SELECT * FROM users WHERE email=? AND password=?";
-  
+
   db.query(sql, [email, password], (err, result) => {
     if (err) {
       console.error("❌ Login Database Error:", {
@@ -118,7 +118,7 @@ app.post("/api/login", (req, res) => {
 
       // Special handling for missing table
       if (err.code === 'ER_NO_SUCH_TABLE') {
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "Database Schema Error: 'users' table not found.",
           details: "The database table 'users' does not exist. Please run setup-db or verify migrations."
         });
@@ -126,16 +126,16 @@ app.post("/api/login", (req, res) => {
 
       // Special handling for missing columns
       if (err.code === 'ER_BAD_FIELD_ERROR') {
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "Database Schema Error: Missing expected columns in 'users' table.",
-          details: err.message 
+          details: err.message
         });
       }
 
-      return res.status(500).json({ 
-        error: "Database error during login", 
+      return res.status(500).json({
+        error: "Database error during login",
         details: err.message,
-        code: err.code 
+        code: err.code
       });
     }
 
@@ -587,7 +587,7 @@ app.get("/api/reports/sales/csv", verifyToken, checkRole(["admin", "manager"]), 
 app.use("/api", twilioRoutes);
 
 // Initialize Background Cron Jobs
-// initCronJobs();
+initCronJobs();
 
 // ================= SERVER =================
 const PORT = process.env.PORT || 8080;
