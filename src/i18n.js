@@ -1,27 +1,20 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-
-// Import translations directly for now to ensure they are available immediately
-// or use i18next-http-backend if you prefer loading from public/locales
-import enTranslation from './locales/en.json';
-import urTranslation from './locales/ur.json';
-
-// Since I created files in public/locales, I should ideally use Backend
-// But for simplicity and to match existing structure, I'll use them as resources
-// Wait, I created them in public/locales. Let's see if I should just use them as objects here.
+import HttpApi from 'i18next-http-backend';
 
 i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
+  .use(HttpApi) // Load translations via HTTP
+  .use(LanguageDetector) // Detect user language
+  .use(initReactI18next) // Pass i18n instance to react-i18next
   .init({
-    resources: {
-      en: { translation: require('../public/locales/en/translation.json') },
-      ur: { translation: require('../public/locales/ur/translation.json') }
-    },
     fallbackLng: 'en',
+    debug: false,
     interpolation: {
-      escapeValue: false,
+      escapeValue: false, // React already safes from xss
+    },
+    backend: {
+      loadPath: '/locales/{{lng}}/translation.json',
     },
     detection: {
       order: ['localStorage', 'cookie', 'htmlTag', 'path', 'subdomain'],

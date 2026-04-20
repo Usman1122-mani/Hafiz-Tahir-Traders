@@ -23,6 +23,7 @@ export const LanguageProvider = ({ children }) => {
     } else {
       document.body.classList.remove('urdu-font');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i18n.language]);
 
   const toggleLang = () => {

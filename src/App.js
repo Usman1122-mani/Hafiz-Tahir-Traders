@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
@@ -40,6 +40,7 @@ const ProtectedRoute = ({ children, roles }) => {
 
 function App() {
   return (
+    <Suspense fallback={null}>
     <LanguageProvider>
     <ThemeProvider>
       <AuthProvider>
@@ -74,6 +75,7 @@ function App() {
       </AuthProvider>
     </ThemeProvider>
     </LanguageProvider>
+    </Suspense>
   );
 }
 

@@ -11,7 +11,7 @@ import './Navbar.css';
 const Navbar = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { user } = useContext(AuthContext);
-  const { toggleLang, t } = useTranslation();
+  const { toggleLang, t, lang } = useTranslation();
   const [showNotif, setShowNotif] = useState(false);
   const [lowStockItems, setLowStockItems] = useState([]);
   const [sendingAlert, setSendingAlert] = useState(false);
