@@ -226,7 +226,7 @@ const Sales = () => {
                 <div className="pos-header">
                   <h1 className="pos-title">
                     <Package size={24} color="var(--accent-primary)" />
-                    {t('sidebar.products')}
+                    {t('products') || 'Products'}
                   </h1>
                   <div className="pos-search">
                     <Search size={18} className="search-icon" />
@@ -244,10 +244,10 @@ const Sales = () => {
                   <table className="products-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '40%' }}>{t('products.productName')}</th>
-                        <th style={{ width: '15%' }}>{t('products.stock')}</th>
-                        <th style={{ width: '25%' }}>{t('products.price')}</th>
-                        <th style={{ width: '20%', textAlign: 'center' }}>{t('products.actions')}</th>
+                        <th style={{ width: '40%' }}>{t('productName') || 'Product Name'}</th>
+                        <th style={{ width: '15%' }}>{t('stock') || 'Stock'}</th>
+                        <th style={{ width: '25%' }}>{t('price') || 'Price'}</th>
+                        <th style={{ width: '20%', textAlign: 'center' }}>{t('action') || 'Action'}</th>
                       </tr>
                     </thead>
                     <tbody>

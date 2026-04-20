@@ -18,7 +18,7 @@ const Products = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', price: '', stock: '', size: '' });
+  const [formData, setFormData] = useState({ name: '', price: '', stock: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const fetchProducts = async () => {
@@ -43,12 +43,11 @@ const Products = () => {
       setFormData({ 
         name: product.name || '', 
         price: product.price || '', 
-        stock: product.stock !== undefined ? product.stock : product.quantity || '',
-        size: product.size || ''
+        stock: product.stock !== undefined ? product.stock : product.quantity || '' 
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', price: '', stock: '', size: '' });
+      setFormData({ name: '', price: '', stock: '' });
     }
     setIsModalOpen(true);
   };
@@ -95,12 +94,11 @@ const Products = () => {
   };
 
   const columns = [
-    { header: t('products.id'), accessor: 'id', cell: (row) => row.id || row._id || 'N/A' },
-    { header: t('products.name'), accessor: 'name' },
-    { header: t('products.size'), accessor: 'size', cell: (row) => row.size || '-' },
-    { header: t('products.price'), accessor: 'price', cell: (row) => `Rs. ${row.price?.toLocaleString() || 0}` },
+    { header: t('id'), accessor: 'id', cell: (row) => row.id || row._id || 'N/A' },
+    { header: t('name'), accessor: 'name' },
+    { header: t('price'), accessor: 'price', cell: (row) => `Rs. ${row.price?.toLocaleString() || 0}` },
     { 
-      header: t('products.stock'), 
+      header: t('stock'), 
       accessor: 'stock', 
       cell: (row) => {
         const val = row.stock !== undefined ? row.stock : row.quantity;
@@ -112,7 +110,7 @@ const Products = () => {
       }
     },
     {
-      header: t('products.actions'),
+      header: t('actions'),
       cell: (row) => {
         const val = row.stock !== undefined ? row.stock : row.quantity;
         return (
@@ -144,11 +142,11 @@ const Products = () => {
     <div className="page-container">
       <header className="page-header">
         <div>
-          <h1 className="page-title">{t('products.title')}</h1>
-          <p className="page-subtitle">{t('products.manageProducts')}</p>
+          <h1 className="page-title">{t('products')}</h1>
+          <p className="page-subtitle">{t('manageProducts')}</p>
         </div>
         <Button onClick={() => openModal()} className="glass">
-          <Plus size={20} /> {t('products.addProduct')}
+          <Plus size={20} /> {t('addProduct')}
         </Button>
       </header>
 
@@ -176,36 +174,30 @@ const Products = () => {
             >
               <Card>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                  <h3>{editingId ? t('products.editProduct') : t('products.addNewProduct')}</h3>
+                  <h3>{editingId ? t('editProduct') : t('addNewProduct')}</h3>
                   <button onClick={closeModal} className="icon-btn"><X size={20}/></button>
                 </div>
                 <form onSubmit={handleSubmit}>
                   <Input 
-                    label={t('products.productName')} 
+                    label={t('productName')} 
                     value={formData.name} 
                     onChange={e => setFormData({...formData, name: e.target.value})} 
                   />
                   <Input 
                     type="number"
-                    label={t('products.price')} 
+                    label={t('price')} 
                     value={formData.price} 
                     onChange={e => setFormData({...formData, price: e.target.value})} 
                   />
                   <Input 
                     type="number"
-                    label={t('products.stockQuantity')} 
+                    label={t('stockQuantity')} 
                     value={formData.stock} 
                     onChange={e => setFormData({...formData, stock: e.target.value})} 
                   />
-                  <Input 
-                    label={t('products.size')} 
-                    placeholder="e.g. Small, Medium, Large"
-                    value={formData.size} 
-                    onChange={e => setFormData({...formData, size: e.target.value})} 
-                  />
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                    <Button type="button" variant="secondary" onClick={closeModal}>{t('products.cancel')}</Button>
-                    <Button type="submit" isLoading={submitting}>{editingId ? t('products.update') : t('products.save')}</Button>
+                    <Button type="button" variant="secondary" onClick={closeModal}>{t('cancel')}</Button>
+                    <Button type="submit" isLoading={submitting}>{editingId ? t('update') : t('save')}</Button>
                   </div>
                 </form>
               </Card>

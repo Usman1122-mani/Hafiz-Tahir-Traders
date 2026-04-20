@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   /* Grocery Theme - Light (Warm & Vibrant) */
@@ -126,36 +126,3 @@ body {
   }
 }
 
-/* RTL & Urdu Support */
-[dir='rtl'] {
-  text-align: right;
-}
-
-[dir='rtl'] .sidebar {
-  border-right: none;
-  border-left: var(--glass-border);
-}
-
-[dir='rtl'] .nav-item-content {
-  flex-direction: row-reverse;
-}
-
-[dir='rtl'] .nav-icon {
-  margin-right: 0;
-  margin-left: 12px;
-}
-
-.urdu-font {
-  font-family: 'Noto Nastaliq Urdu', serif;
-  line-height: 2.2;
-}
-
-.urdu-font h1, .urdu-font h2, .urdu-font h3 {
-  line-height: 1.8;
-}
-
-/* Ensure tooltips and badges flip correctly */
-[dir='rtl'] .notification-badge {
-  right: auto;
-  left: -5px;
-}
