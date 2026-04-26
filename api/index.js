@@ -179,23 +179,34 @@ app.get("/api/categories", verifyToken, checkRole(["admin", "manager", "cashier"
 
 // ================= PRODUCTS =================
 app.post("/api/products", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
+  console.log("Received product data:", req.body);
   const { name, size, buyPrice, sellPrice, stock, lowStockLimit } = req.body;
 
-  // Validation
-  if (!name || !size || buyPrice === undefined || sellPrice === undefined || stock === undefined || lowStockLimit === undefined) {
+  // Validation using == null to not reject 0 or empty strings incorrectly
+  if (name == null || size == null || buyPrice == null || sellPrice == null || stock == null || lowStockLimit == null) {
     return res.status(400).json({ error: "All fields are required: name, size, buyPrice, sellPrice, stock, lowStockLimit" });
   }
 
-  if (Number(buyPrice) > Number(sellPrice)) {
+  // Convert to numbers
+  const bPrice = Number(buyPrice);
+  const sPrice = Number(sellPrice);
+  const qty = Number(stock);
+  const lowLimit = Number(lowStockLimit);
+
+  if (isNaN(bPrice) || isNaN(sPrice) || isNaN(qty) || isNaN(lowLimit)) {
+    return res.status(400).json({ error: "Numeric fields must be valid numbers" });
+  }
+
+  if (bPrice > sPrice) {
     return res.status(400).json({ error: "buyPrice must be less than or equal to sellPrice" });
   }
 
-  if (Number(stock) < 0 || Number(lowStockLimit) < 0) {
+  if (qty < 0 || lowLimit < 0) {
     return res.status(400).json({ error: "stock and lowStockLimit must be greater than or equal to 0" });
   }
 
   const sql = "INSERT INTO products (name, size, buy_price, sell_price, stock, low_stock_limit) VALUES (?, ?, ?, ?, ?, ?)";
-  db.query(sql, [name, size, Number(buyPrice), Number(sellPrice), Number(stock), Number(lowStockLimit)], (err) => {
+  db.query(sql, [name, size, bPrice, sPrice, qty, lowLimit], (err) => {
     if (err) {
       console.error("Database error during product insertion:", err);
       return res.status(500).json({ error: "Database error", details: err.message });
