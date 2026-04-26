@@ -179,9 +179,14 @@ app.get("/api/categories", verifyToken, checkRole(["admin", "manager", "cashier"
 
 // ================= PRODUCTS =================
 app.post("/api/products", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  const { name, category_id, supplier_id, price, quantity } = req.body;
-  const sql = "INSERT INTO products (name, category_id, supplier_id, price, quantity) VALUES (?, ?, ?, ?, ?)";
-  db.query(sql, [name, category_id, supplier_id, price, quantity], (err) => {
+  const { name, category_id, supplier_id, price, sell_price, buy_price, size, quantity, stock } = req.body;
+  const s_price = sell_price || price || 0;
+  const b_price = buy_price || 0;
+  const qty = stock !== undefined ? stock : (quantity !== undefined ? quantity : 0);
+  const prod_size = size || 'N/A';
+  
+  const sql = "INSERT INTO products (name, category_id, supplier_id, price, buy_price, size, stock, quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+  db.query(sql, [name, category_id || null, supplier_id || null, s_price, b_price, prod_size, qty, qty], (err) => {
     if (err) return res.status(500).send(err);
     res.send("Product Added Successfully");
   });
@@ -189,7 +194,7 @@ app.post("/api/products", verifyToken, checkRole(["admin", "manager"]), (req, re
 
 // Allow cashier to see products
 app.get("/api/products", verifyToken, checkRole(["admin", "manager", "cashier"]), (req, res) => {
-  db.query("SELECT * FROM products", (err, result) => {
+  db.query("SELECT *, price as sell_price FROM products", (err, result) => {
     if (err) return res.status(500).send(err);
     res.json(result);
   });
@@ -197,10 +202,12 @@ app.get("/api/products", verifyToken, checkRole(["admin", "manager", "cashier"])
 
 // Update Product
 app.put("/api/products/:id", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  const { name, price, stock, quantity, category_id, supplier_id } = req.body;
+  const { name, price, sell_price, buy_price, size, stock, quantity, category_id, supplier_id } = req.body;
+  const s_price = sell_price || price;
   const qty = stock !== undefined ? stock : quantity;
-  const sql = "UPDATE products SET name=?, price=?, quantity=? WHERE id=?";
-  db.query(sql, [name, price, qty, req.params.id], (err, result) => {
+  
+  const sql = "UPDATE products SET name=?, price=?, buy_price=?, size=?, stock=?, quantity=?, category_id=?, supplier_id=? WHERE id=?";
+  db.query(sql, [name, s_price, buy_price, size, qty, qty, category_id || null, supplier_id || null, req.params.id], (err, result) => {
     if (err) return res.status(500).send(err);
     if (result.affectedRows === 0) return res.status(404).json({ message: "Product not found" });
     res.json({ message: "Product Updated Successfully" });
@@ -527,7 +534,7 @@ app.delete("/api/users/:id", verifyToken, checkRole(["admin"]), (req, res) => {
 // ================= REPORTS =================
 // Get inventory report data
 app.get("/api/reports/inventory", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  db.query("SELECT id, name, price, stock, quantity FROM products ORDER BY id ASC", (err, result) => {
+  db.query("SELECT id, name, price, buy_price, size, stock, quantity FROM products ORDER BY id ASC", (err, result) => {
     if (err) return res.status(500).send(err);
     res.json(result);
   });
@@ -549,12 +556,13 @@ app.get("/api/reports/sales", verifyToken, checkRole(["admin", "manager"]), (req
 
 // Export Inventory as CSV
 app.get("/api/reports/inventory/csv", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  db.query("SELECT id, name, price, stock FROM products ORDER BY id ASC", (err, result) => {
+  db.query("SELECT id, name, price, buy_price, size, stock FROM products ORDER BY id ASC", (err, result) => {
     if (err) return res.status(500).send(err);
-    let csv = "ID,Product Name,Price (Rs.),Stock\n";
+    let csv = "ID,Product Name,Size,Buy Price,Sell Price,Stock,Profit Per Unit\n";
     result.forEach(row => {
       const stock = row.stock !== undefined ? row.stock : (row.quantity || 0);
-      csv += `${row.id},"${row.name}",${row.price},${stock}\n`;
+      const profit = (row.price || 0) - (row.buy_price || 0);
+      csv += `${row.id},"${row.name}","${row.size || 'N/A'}",${row.buy_price},${row.price},${stock},${profit}\n`;
     });
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", "attachment; filename=inventory_report.csv");
@@ -580,6 +588,21 @@ app.get("/api/reports/sales/csv", verifyToken, checkRole(["admin", "manager"]), 
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", "attachment; filename=sales_report.csv");
     res.send(csv);
+  });
+});
+
+// Profit Statistics for Analytics
+app.get("/api/reports/profit-stats", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
+  const sql = `
+    SELECT name, (price - buy_price) as profit_per_unit, stock
+    FROM products
+    WHERE (price - buy_price) > 0
+    ORDER BY (price - buy_price) * stock DESC
+    LIMIT 10
+  `;
+  db.query(sql, (err, result) => {
+    if (err) return res.status(500).send(err);
+    res.json(result);
   });
 });
 

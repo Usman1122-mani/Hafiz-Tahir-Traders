@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, X } from 'lucide-react';
+import { 
+  Plus, Edit2, Trash2, X, Search, Filter, 
+  Download, TrendingUp, Package, AlertTriangle, 
+  DollarSign, ChevronUp, ChevronDown 
+} from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Table } from '../components/ui/Table';
 import { Button } from '../components/ui/Button';
@@ -9,16 +13,29 @@ import { Loader } from '../components/ui/Loader';
 import { useTranslation } from '../context/LanguageContext';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
-import './Dashboard.css';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+  Tooltip, ResponsiveContainer, Cell 
+} from 'recharts';
+import './Products.css';
 
 const Products = () => {
   const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterSize, setFilterSize] = useState('All');
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', price: '', stock: '' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    size: 'M', 
+    buy_price: '', 
+    sell_price: '', 
+    stock: '' 
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const fetchProducts = async () => {
@@ -37,17 +54,74 @@ const Products = () => {
     fetchProducts();
   }, []);
 
+  // Stats Calculations
+  const stats = useMemo(() => {
+    const totalInventoryValue = products.reduce((sum, p) => sum + (p.sell_price * p.stock), 0);
+    const totalPotentialProfit = products.reduce((sum, p) => sum + ((p.sell_price - p.buy_price) * p.stock), 0);
+    const lowStockCount = products.filter(p => p.stock < 10).length;
+    
+    return {
+      totalValue: totalInventoryValue,
+      totalProfit: totalPotentialProfit,
+      lowStock: lowStockCount,
+      totalProducts: products.length
+    };
+  }, [products]);
+
+  // Filtering & Sorting Logic
+  const filteredProducts = useMemo(() => {
+    let result = products.filter(p => 
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.size?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    if (filterSize !== 'All') {
+      result = result.filter(p => p.size === filterSize);
+    }
+
+    if (sortConfig.key) {
+      result.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+        
+        // Handle nested or calculated fields if needed
+        if (sortConfig.key === 'profit') {
+          valA = a.sell_price - a.buy_price;
+          valB = b.sell_price - b.buy_price;
+        }
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [products, searchTerm, filterSize, sortConfig]);
+
+  const sizes = ['All', ...new Set(products.map(p => p.size).filter(Boolean))];
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
   const openModal = (product = null) => {
     if (product) {
       setEditingId(product.id || product._id);
       setFormData({ 
         name: product.name || '', 
-        price: product.price || '', 
+        size: product.size || 'M',
+        buy_price: product.buy_price || '', 
+        sell_price: product.sell_price || product.price || '', 
         stock: product.stock !== undefined ? product.stock : product.quantity || '' 
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', price: '', stock: '' });
+      setFormData({ name: '', size: 'M', buy_price: '', sell_price: '', stock: '' });
     }
     setIsModalOpen(true);
   };
@@ -59,18 +133,31 @@ const Products = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.price || formData.stock === '') {
-      toast.warning('All fields are required');
+    
+    // Validation
+    if (!formData.name || !formData.buy_price || !formData.sell_price || formData.stock === '') {
+      toast.warning('Please fill all required fields');
       return;
     }
+
+    if (Number(formData.buy_price) > Number(formData.sell_price)) {
+      toast.warning('Buy Price cannot be greater than Sell Price');
+      return;
+    }
+
+    if (Number(formData.stock) < 0) {
+      toast.warning('Stock cannot be negative');
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (editingId) {
         await api.put(`/products/${editingId}`, formData);
-        toast.success('Product updated');
+        toast.success('Product updated successfully');
       } else {
         await api.post('/products', formData);
-        toast.success('Product added');
+        toast.success('Product added successfully');
       }
       closeModal();
       fetchProducts();
@@ -82,10 +169,10 @@ const Products = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this product?')) {
+    if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         await api.delete(`/products/${id}`);
-        toast.success('Product deleted');
+        toast.success('Product deleted successfully');
         fetchProducts();
       } catch (error) {
         toast.error('Failed to delete product');
@@ -93,71 +180,217 @@ const Products = () => {
     }
   };
 
+  const exportToCSV = () => {
+    const headers = ['Name', 'Size', 'Buy Price', 'Sell Price', 'Stock', 'Profit Per Unit', 'Total Profit'];
+    const rows = filteredProducts.map(p => [
+      p.name,
+      p.size,
+      p.buy_price,
+      p.sell_price,
+      p.stock,
+      p.sell_price - p.buy_price,
+      (p.sell_price - p.buy_price) * p.stock
+    ]);
+
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n"
+      + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "inventory_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const columns = [
-    { header: t('id'), accessor: 'id', cell: (row) => row.id || row._id || 'N/A' },
-    { header: t('name'), accessor: 'name' },
-    { header: t('price'), accessor: 'price', cell: (row) => `Rs. ${row.price?.toLocaleString() || 0}` },
     { 
-      header: t('stock'), 
+      header: 'Product Name', 
+      accessor: 'name',
+      sortable: true,
+      cell: (row) => (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontWeight: 600 }}>{row.name}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID: {row.id || row._id}</span>
+        </div>
+      )
+    },
+    { header: 'Size', accessor: 'size', sortable: true },
+    { 
+      header: 'Buy Price', 
+      accessor: 'buy_price', 
+      sortable: true,
+      cell: (row) => `Rs. ${Number(row.buy_price).toLocaleString()}` 
+    },
+    { 
+      header: 'Sell Price', 
+      accessor: 'sell_price', 
+      sortable: true,
+      cell: (row) => `Rs. ${Number(row.sell_price).toLocaleString()}` 
+    },
+    { 
+      header: 'Stock', 
       accessor: 'stock', 
+      sortable: true,
+      cell: (row) => (
+        <span style={{ 
+          color: row.stock < 10 ? 'var(--danger)' : 'inherit', 
+          fontWeight: row.stock < 10 ? 700 : 500,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}>
+          {row.stock}
+          {row.stock < 10 && <AlertTriangle size={14} />}
+        </span>
+      )
+    },
+    {
+      header: 'Profit/Loss',
       cell: (row) => {
-        const val = row.stock !== undefined ? row.stock : row.quantity;
+        const profit = row.sell_price - row.buy_price;
+        const totalProfit = profit * row.stock;
         return (
-          <span style={{ color: val < 10 ? 'var(--danger)' : 'inherit', fontWeight: val < 10 ? 600 : 400 }}>
-            {val}
-          </span>
+          <div className={`profit-badge ${profit >= 0 ? 'positive' : 'negative'}`}>
+            {profit >= 0 ? '+' : ''}Rs. {totalProfit.toLocaleString()}
+          </div>
         );
       }
     },
     {
-      header: t('actions'),
-      cell: (row) => {
-        const val = row.stock !== undefined ? row.stock : row.quantity;
-        return (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {val < 10 && (
-              <Button 
-                variant="primary" 
-                size="sm" 
-                onClick={() => openModal(row)}
-                title="Restock Item"
-                style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
-              >
-                <Plus size={16} />
-              </Button>
-            )}
-            <Button variant="secondary" size="sm" onClick={() => openModal(row)}>
-              <Edit2 size={16} />
-            </Button>
-            <Button variant="danger" size="sm" onClick={() => handleDelete(row.id || row._id)}>
-              <Trash2 size={16} />
-            </Button>
-          </div>
-        );
-      }
+      header: 'Actions',
+      cell: (row) => (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button variant="secondary" size="sm" onClick={() => openModal(row)}>
+            <Edit2 size={16} />
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => handleDelete(row.id || row._id)}>
+            <Trash2 size={16} />
+          </Button>
+        </div>
+      )
     }
   ];
+
+  // Chart Data
+  const chartData = useMemo(() => {
+    return products
+      .filter(p => p.sell_price - p.buy_price > 0)
+      .map(p => ({
+        name: p.name,
+        profit: (p.sell_price - p.buy_price) * p.stock,
+        unitProfit: p.sell_price - p.buy_price
+      }))
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 8);
+  }, [products]);
+
+  const currentProfit = (Number(formData.sell_price) || 0) - (Number(formData.buy_price) || 0);
+  const currentTotalProfit = currentProfit * (Number(formData.stock) || 0);
 
   return (
     <div className="page-container">
       <header className="page-header">
         <div>
-          <h1 className="page-title">{t('products')}</h1>
-          <p className="page-subtitle">{t('manageProducts')}</p>
+          <h1 className="page-title">{t('Inventory Management')}</h1>
+          <p className="page-subtitle">Track, manage and analyze your products</p>
         </div>
-        <Button onClick={() => openModal()} className="glass">
-          <Plus size={20} /> {t('addProduct')}
-        </Button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button onClick={exportToCSV} variant="secondary" className="glass">
+            <Download size={20} /> Export CSV
+          </Button>
+          <Button onClick={() => openModal()} className="glass">
+            <Plus size={20} /> Add Product
+          </Button>
+        </div>
       </header>
+
+      {/* Stats Summary */}
+      <div className="products-dashboard">
+        <div className="stat-card">
+          <span className="stat-label">Total Products</span>
+          <span className="stat-value">{stats.totalProducts}</span>
+          <Package size={24} style={{ opacity: 0.2, position: 'absolute', right: '20px', bottom: '20px' }} />
+        </div>
+        <div className="stat-card value">
+          <span className="stat-label">Inventory Value</span>
+          <span className="stat-value">Rs. {stats.totalValue.toLocaleString()}</span>
+          <DollarSign size={24} style={{ opacity: 0.2, position: 'absolute', right: '20px', bottom: '20px' }} />
+        </div>
+        <div className="stat-card profit">
+          <span className="stat-label">Potential Profit</span>
+          <span className="stat-value">Rs. {stats.totalProfit.toLocaleString()}</span>
+          <TrendingUp size={24} style={{ opacity: 0.2, position: 'absolute', right: '20px', bottom: '20px' }} />
+        </div>
+        <div className="stat-card low-stock">
+          <span className="stat-label">Low Stock Alert</span>
+          <span className="stat-value">{stats.lowStock}</span>
+          <AlertTriangle size={24} style={{ opacity: 0.2, position: 'absolute', right: '20px', bottom: '20px' }} />
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="search-filter-bar">
+        <div className="search-container">
+          <Search className="search-icon" size={18} />
+          <input 
+            type="text" 
+            placeholder="Search by name or size..." 
+            className="search-input"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="filter-actions">
+          <select 
+            className="search-input" 
+            style={{ width: 'auto', paddingLeft: '12px' }}
+            value={filterSize}
+            onChange={(e) => setFilterSize(e.target.value)}
+          >
+            {sizes.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
 
       {loading ? (
         <Card><Loader /></Card>
       ) : (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <Table columns={columns} data={products} />
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            <Table columns={columns} data={filteredProducts} />
+          </Card>
         </motion.div>
       )}
 
+      {/* Analytics Section */}
+      {!loading && chartData.length > 0 && (
+        <div className="analytics-section">
+          <h2 className="analytics-title">Top Profit Performers</h2>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip 
+                  contentStyle={{ background: 'var(--card-bg)', border: 'none', borderRadius: '8px', boxShadow: 'var(--shadow)' }}
+                  formatter={(value) => [`Rs. ${value.toLocaleString()}`, 'Total Profit']}
+                />
+                <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index % 2 === 0 ? 'var(--primary)' : '#818cf8'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <motion.div 
@@ -165,39 +398,99 @@ const Products = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            style={{ zIndex: 1000 }}
           >
             <motion.div 
               className="modal-content"
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
+              style={{ maxWidth: '500px' }}
             >
               <Card>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                  <h3>{editingId ? t('editProduct') : t('addNewProduct')}</h3>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {editingId ? <Edit2 size={20}/> : <Plus size={20}/>}
+                    {editingId ? 'Edit Product' : 'Add New Product'}
+                  </h3>
                   <button onClick={closeModal} className="icon-btn"><X size={20}/></button>
                 </div>
                 <form onSubmit={handleSubmit}>
                   <Input 
-                    label={t('productName')} 
+                    label="Product Name" 
+                    placeholder="e.g. Cotton Shirt"
+                    required
                     value={formData.name} 
                     onChange={e => setFormData({...formData, name: e.target.value})} 
                   />
-                  <Input 
-                    type="number"
-                    label={t('price')} 
-                    value={formData.price} 
-                    onChange={e => setFormData({...formData, price: e.target.value})} 
-                  />
-                  <Input 
-                    type="number"
-                    label={t('stockQuantity')} 
-                    value={formData.stock} 
-                    onChange={e => setFormData({...formData, stock: e.target.value})} 
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                    <div className="input-group">
+                      <label className="input-label" style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500 }}>Size</label>
+                      <select 
+                        className="search-input"
+                        value={formData.size}
+                        onChange={e => setFormData({...formData, size: e.target.value})}
+                        style={{ paddingLeft: '12px' }}
+                      >
+                        <option value="S">Small (S)</option>
+                        <option value="M">Medium (M)</option>
+                        <option value="L">Large (L)</option>
+                        <option value="XL">Extra Large (XL)</option>
+                        <option value="XXL">XXL</option>
+                        <option value="Custom">Custom</option>
+                      </select>
+                    </div>
+                    <Input 
+                      type="number"
+                      label="Stock Quantity" 
+                      placeholder="0"
+                      required
+                      value={formData.stock} 
+                      onChange={e => setFormData({...formData, stock: e.target.value})} 
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                    <Input 
+                      type="number"
+                      label="Buy Price (Rs.)" 
+                      placeholder="0"
+                      required
+                      value={formData.buy_price} 
+                      onChange={e => setFormData({...formData, buy_price: e.target.value})} 
+                    />
+                    <Input 
+                      type="number"
+                      label="Sell Price (Rs.)" 
+                      placeholder="0"
+                      required
+                      value={formData.sell_price} 
+                      onChange={e => setFormData({...formData, sell_price: e.target.value})} 
+                    />
+                  </div>
+
+                  {/* Real-time Profit Preview */}
+                  <div className="profit-calculator">
+                    <div className="calc-row">
+                      <span className="calc-label">Profit per Unit:</span>
+                      <span className={`calc-value ${currentProfit >= 0 ? 'profit' : 'loss'}`}>
+                        Rs. {currentProfit.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="calc-row">
+                      <span className="calc-label">Total Potential Profit:</span>
+                      <span className={`calc-value ${currentTotalProfit >= 0 ? 'profit' : 'loss'}`}>
+                        Rs. {currentTotalProfit.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
                     <Button type="button" variant="secondary" onClick={closeModal}>{t('cancel')}</Button>
-                    <Button type="submit" isLoading={submitting}>{editingId ? t('update') : t('save')}</Button>
+                    <Button type="submit" isLoading={submitting}>
+                      {editingId ? 'Update Product' : 'Save Product'}
+                    </Button>
                   </div>
                 </form>
               </Card>
