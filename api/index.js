@@ -179,17 +179,28 @@ app.get("/api/categories", verifyToken, checkRole(["admin", "manager", "cashier"
 
 // ================= PRODUCTS =================
 app.post("/api/products", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  const { name, category_id, supplier_id, price, sell_price, buy_price, size, quantity, stock, min_stock } = req.body;
-  const s_price = sell_price || price || 0;
-  const b_price = buy_price || 0;
-  const qty = stock !== undefined ? stock : (quantity !== undefined ? quantity : 0);
-  const prod_size = size || 'N/A';
-  const m_stock = min_stock !== undefined ? min_stock : 10;
-  
-  const sql = "INSERT INTO products (name, category_id, supplier_id, price, buy_price, size, stock, quantity, min_stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  db.query(sql, [name, category_id || null, supplier_id || null, s_price, b_price, prod_size, qty, qty, m_stock], (err) => {
-    if (err) return res.status(500).send(err);
-    res.send("Product Added Successfully");
+  const { name, size, buyPrice, sellPrice, stock, lowStockLimit } = req.body;
+
+  // Validation
+  if (!name || !size || buyPrice === undefined || sellPrice === undefined || stock === undefined || lowStockLimit === undefined) {
+    return res.status(400).json({ error: "All fields are required: name, size, buyPrice, sellPrice, stock, lowStockLimit" });
+  }
+
+  if (Number(buyPrice) > Number(sellPrice)) {
+    return res.status(400).json({ error: "buyPrice must be less than or equal to sellPrice" });
+  }
+
+  if (Number(stock) < 0 || Number(lowStockLimit) < 0) {
+    return res.status(400).json({ error: "stock and lowStockLimit must be greater than or equal to 0" });
+  }
+
+  const sql = "INSERT INTO products (name, size, buy_price, sell_price, stock, low_stock_limit) VALUES (?, ?, ?, ?, ?, ?)";
+  db.query(sql, [name, size, Number(buyPrice), Number(sellPrice), Number(stock), Number(lowStockLimit)], (err) => {
+    if (err) {
+      console.error("Database error during product insertion:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
+    res.status(201).json({ message: "Product Added Successfully" });
   });
 });
 
@@ -222,8 +233,19 @@ app.post("/api/products/bulk", verifyToken, checkRole(["admin", "manager"]), (re
 
 // Allow cashier to see products
 app.get("/api/products", verifyToken, checkRole(["admin", "manager", "cashier"]), (req, res) => {
-  db.query("SELECT *, price as sell_price FROM products", (err, result) => {
-    if (err) return res.status(500).send(err);
+  const sql = `
+    SELECT 
+      *,
+      (sell_price - buy_price) AS profit_per_unit,
+      ((sell_price - buy_price) * stock) AS total_profit,
+      CASE WHEN stock <= low_stock_limit THEN 'Low Stock' ELSE 'In Stock' END AS stock_status
+    FROM products
+  `;
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.error("Database error during product retrieval:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
     res.json(result);
   });
 });
