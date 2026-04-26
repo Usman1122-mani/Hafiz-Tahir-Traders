@@ -452,16 +452,18 @@ const Products = () => {
                   </h3>
                   <button onClick={closeModal} className="icon-btn"><X size={20}/></button>
                 </div>
-                <form onSubmit={handleSubmit}>
-                  <Input 
-                    label="Product Name" 
-                    placeholder="e.g. Cotton Shirt"
-                    required
-                    value={formData.name} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                  />
+                <form onSubmit={handleSubmit} className="modal-form">
+                  <div className="form-row full">
+                    <Input 
+                      label="Product Name" 
+                      placeholder="e.g. Cotton Shirt"
+                      required
+                      value={formData.name} 
+                      onChange={e => setFormData({...formData, name: e.target.value})} 
+                    />
+                  </div>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                  <div className="form-row">
                     <Input 
                       label="Size" 
                       placeholder="e.g. 1L, 500ml, XL"
@@ -479,7 +481,7 @@ const Products = () => {
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                  <div className="form-row">
                     <Input 
                       type="number"
                       label="Buy Price (Rs.)" 
@@ -498,7 +500,7 @@ const Products = () => {
                     />
                   </div>
 
-                  <div style={{ marginTop: '12px' }}>
+                  <div className="form-row full">
                     <Input 
                       type="number"
                       label="Low Stock Alert Limit" 
@@ -509,7 +511,7 @@ const Products = () => {
                     />
                   </div>
 
-                  {/* Real-time Profit Preview */}
+                  {/* Row 5: Profit Summary Box */}
                   <div className="profit-calculator">
                     <div className="calc-row">
                       <span className="calc-label">Profit per Unit:</span>
@@ -525,7 +527,7 @@ const Products = () => {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                  <div className="modal-actions">
                     <Button type="button" variant="secondary" onClick={closeModal}>{t('cancel')}</Button>
                     <Button type="submit" isLoading={submitting}>
                       {editingId ? 'Update Product' : 'Save Product'}
