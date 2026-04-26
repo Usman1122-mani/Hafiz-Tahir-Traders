@@ -442,46 +442,38 @@ const Products = () => {
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
-              style={{ maxWidth: '500px' }}
+              style={{ maxWidth: '500px', width: '100%' }}
             >
-              <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {editingId ? <Edit2 size={20}/> : <Plus size={20}/>}
+              <Card style={{ padding: '32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', fontWeight: 600 }}>
+                    {editingId ? <Edit2 size={24} style={{ color: 'var(--accent-primary)' }}/> : <Plus size={24} style={{ color: 'var(--accent-primary)' }}/>}
                     {editingId ? 'Edit Product' : 'Add New Product'}
                   </h3>
-                  <button onClick={closeModal} className="icon-btn"><X size={20}/></button>
+                  <button onClick={closeModal} className="icon-btn" style={{ padding: '8px', borderRadius: '50%', background: 'var(--bg-secondary)' }}>
+                    <X size={20}/>
+                  </button>
                 </div>
-                <form onSubmit={handleSubmit} className="modal-form">
-                  <div className="form-row full">
-                    <Input 
-                      label="Product Name" 
-                      placeholder="e.g. Cotton Shirt"
-                      required
-                      value={formData.name} 
-                      onChange={e => setFormData({...formData, name: e.target.value})} 
-                    />
-                  </div>
+                <form onSubmit={handleSubmit}>
+                  <Input 
+                    label="Product Name" 
+                    placeholder="e.g. Cotton Shirt"
+                    required
+                    value={formData.name} 
+                    onChange={e => setFormData({...formData, name: e.target.value})} 
+                  />
                   
-                  <div className="form-row">
+                  <div style={{ marginTop: '12px' }}>
                     <Input 
                       label="Size" 
-                      placeholder="e.g. 1L, 500ml, XL"
+                      placeholder="e.g. 1L, 500ml, XL, Box"
                       required
                       value={formData.size} 
                       onChange={e => setFormData({...formData, size: e.target.value})} 
                     />
-                    <Input 
-                      type="number"
-                      label="Stock Quantity" 
-                      placeholder="0"
-                      required
-                      value={formData.stock} 
-                      onChange={e => setFormData({...formData, stock: e.target.value})} 
-                    />
                   </div>
-
-                  <div className="form-row">
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
                     <Input 
                       type="number"
                       label="Buy Price (Rs.)" 
@@ -500,10 +492,18 @@ const Products = () => {
                     />
                   </div>
 
-                  <div className="form-row full">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
                     <Input 
                       type="number"
-                      label="Low Stock Alert Limit" 
+                      label="Stock Quantity" 
+                      placeholder="0"
+                      required
+                      value={formData.stock} 
+                      onChange={e => setFormData({...formData, stock: e.target.value})} 
+                    />
+                    <Input 
+                      type="number"
+                      label="Low Stock Limit" 
                       placeholder="e.g. 10"
                       required
                       value={formData.min_stock} 
@@ -511,7 +511,7 @@ const Products = () => {
                     />
                   </div>
 
-                  {/* Row 5: Profit Summary Box */}
+                  {/* Real-time Profit Preview */}
                   <div className="profit-calculator">
                     <div className="calc-row">
                       <span className="calc-label">Profit per Unit:</span>
@@ -527,7 +527,7 @@ const Products = () => {
                     </div>
                   </div>
 
-                  <div className="modal-actions">
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
                     <Button type="button" variant="secondary" onClick={closeModal}>{t('cancel')}</Button>
                     <Button type="submit" isLoading={submitting}>
                       {editingId ? 'Update Product' : 'Save Product'}
