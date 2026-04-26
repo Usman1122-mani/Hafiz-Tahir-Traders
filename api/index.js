@@ -222,15 +222,14 @@ app.post("/api/products/bulk", verifyToken, checkRole(["admin", "manager"]), (re
     return res.status(400).json({ message: "Invalid data. Expected an array of products." });
   }
 
-  const sql = "INSERT INTO products (name, price, buy_price, size, stock, quantity, min_stock) VALUES ?";
+  const sql = "INSERT INTO products (name, size, buy_price, sell_price, stock, low_stock_limit) VALUES ?";
   const values = products.map(p => [
     p.name, 
-    p.sell_price || p.price || 0, 
-    p.buy_price || 0, 
     p.size || 'N/A', 
+    p.buy_price || 0, 
+    p.sell_price || p.price || 0, 
     p.stock || 0, 
-    p.stock || 0, 
-    p.min_stock || 10
+    p.low_stock_limit || p.min_stock || 10
   ]);
 
   db.query(sql, [values], (err, result) => {
@@ -263,12 +262,13 @@ app.get("/api/products", verifyToken, checkRole(["admin", "manager", "cashier"])
 
 // Update Product
 app.put("/api/products/:id", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  const { name, price, sell_price, buy_price, size, stock, quantity, category_id, supplier_id, min_stock } = req.body;
-  const s_price = sell_price || price;
+  const { name, price, sell_price, buy_price, size, stock, quantity, category_id, supplier_id, min_stock, low_stock_limit } = req.body;
+  const s_price = sell_price !== undefined ? sell_price : price;
   const qty = stock !== undefined ? stock : quantity;
+  const lowLimit = low_stock_limit !== undefined ? low_stock_limit : min_stock;
   
-  const sql = "UPDATE products SET name=?, price=?, buy_price=?, size=?, stock=?, quantity=?, category_id=?, supplier_id=?, min_stock=? WHERE id=?";
-  db.query(sql, [name, s_price, buy_price, size, qty, qty, category_id || null, supplier_id || null, min_stock || 10, req.params.id], (err, result) => {
+  const sql = "UPDATE products SET name=?, size=?, buy_price=?, sell_price=?, stock=?, low_stock_limit=?, category_id=?, supplier_id=? WHERE id=?";
+  db.query(sql, [name, size, buy_price || 0, s_price || 0, qty || 0, lowLimit || 10, category_id || null, supplier_id || null, req.params.id], (err, result) => {
     if (err) return res.status(500).send(err);
     if (result.affectedRows === 0) return res.status(404).json({ message: "Product not found" });
     res.json({ message: "Product Updated Successfully" });
@@ -595,7 +595,7 @@ app.delete("/api/users/:id", verifyToken, checkRole(["admin"]), (req, res) => {
 // ================= REPORTS =================
 // Get inventory report data
 app.get("/api/reports/inventory", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  db.query("SELECT id, name, price, buy_price, size, stock, quantity FROM products ORDER BY id ASC", (err, result) => {
+  db.query("SELECT id, name, size, buy_price, sell_price, stock, low_stock_limit FROM products ORDER BY id ASC", (err, result) => {
     if (err) return res.status(500).send(err);
     res.json(result);
   });
@@ -617,13 +617,13 @@ app.get("/api/reports/sales", verifyToken, checkRole(["admin", "manager"]), (req
 
 // Export Inventory as CSV
 app.get("/api/reports/inventory/csv", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  db.query("SELECT id, name, price, buy_price, size, stock FROM products ORDER BY id ASC", (err, result) => {
+  db.query("SELECT id, name, size, buy_price, sell_price, stock FROM products ORDER BY id ASC", (err, result) => {
     if (err) return res.status(500).send(err);
     let csv = "ID,Product Name,Size,Buy Price,Sell Price,Stock,Profit Per Unit\n";
     result.forEach(row => {
-      const stock = row.stock !== undefined ? row.stock : (row.quantity || 0);
-      const profit = (row.price || 0) - (row.buy_price || 0);
-      csv += `${row.id},"${row.name}","${row.size || 'N/A'}",${row.buy_price},${row.price},${stock},${profit}\n`;
+      const stock = row.stock || 0;
+      const profit = (row.sell_price || 0) - (row.buy_price || 0);
+      csv += `${row.id},"${row.name}","${row.size || 'N/A'}",${row.buy_price || 0},${row.sell_price || 0},${stock},${profit}\n`;
     });
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", "attachment; filename=inventory_report.csv");

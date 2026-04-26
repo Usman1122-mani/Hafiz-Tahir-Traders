@@ -25,9 +25,9 @@ const sendLowStockAlert = async (req, res = null) => {
     // 1. Fetch products where quantity is less than min_stock
     // We handle the edge case where stock might be named quantity or stock.
     const query = `
-      SELECT id, name, quantity as current_qty, min_stock, last_alert_sent 
+      SELECT id, name, stock as current_qty, low_stock_limit, last_alert_sent 
       FROM products 
-      WHERE quantity < min_stock
+      WHERE stock <= low_stock_limit
     `;
 
     db.query(query, async (err, products) => {

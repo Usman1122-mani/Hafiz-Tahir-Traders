@@ -4,13 +4,13 @@ const modifyTable = async () => {
   try {
     console.log("Checking products table schema...");
     
-    // Add min_stock column
+    // Add low_stock_limit column
     try {
-      await db.promise().query("ALTER TABLE products ADD COLUMN min_stock INT DEFAULT 10");
-      console.log("Added min_stock column");
+      await db.promise().query("ALTER TABLE products ADD COLUMN low_stock_limit INT DEFAULT 10");
+      console.log("Added low_stock_limit column");
     } catch (err) {
-      if (err.code === 'ER_DUP_FIELDNAME') console.log("min_stock already exists");
-      else console.error("Error adding min_stock:", err);
+      if (err.code === 'ER_DUP_FIELDNAME') console.log("low_stock_limit already exists");
+      else console.error("Error adding low_stock_limit:", err);
     }
 
     // Add last_alert_sent column
