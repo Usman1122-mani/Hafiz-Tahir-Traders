@@ -18,7 +18,7 @@ const Suppliers = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', service_type: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const fetchItems = async () => {
@@ -43,11 +43,12 @@ const Suppliers = () => {
       setFormData({ 
         name: item.name || '', 
         phone: item.phone || '', 
-        email: item.email || '' 
+        email: item.email || '',
+        service_type: item.service_type || ''
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', phone: '', email: '' });
+      setFormData({ name: '', phone: '', email: '', service_type: '' });
     }
     setIsModalOpen(true);
   };
@@ -59,8 +60,8 @@ const Suppliers = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone) {
-      toast.warning('Name and Phone are required');
+    if (!formData.name || !formData.phone || !formData.service_type) {
+      toast.warning('Name, Phone, and Service Type are required');
       return;
     }
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -100,6 +101,7 @@ const Suppliers = () => {
   const columns = [
     { header: t('id'), accessor: 'id', cell: (row) => row.id || row._id || '-' },
     { header: t('name'), accessor: 'name' },
+    { header: 'Service Type', accessor: 'service_type', cell: (row) => row.service_type || '-' },
     { header: t('contact'), accessor: 'phone', cell: (row) => row.phone || '-' },
     { header: t('email'), accessor: 'email', cell: (row) => row.email || '-' },
     {
@@ -167,6 +169,30 @@ const Suppliers = () => {
                     value={formData.phone} 
                     onChange={e => setFormData({...formData, phone: e.target.value})} 
                   />
+                  <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Service / Product Type *
+                    </label>
+                    <input 
+                      className="input-field"
+                      list="service-types"
+                      placeholder="e.g. Beverages, Electronics..."
+                      value={formData.service_type}
+                      onChange={e => setFormData({...formData, service_type: e.target.value})}
+                      required
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                    <datalist id="service-types">
+                      <option value="Beverages" />
+                      <option value="Electronics" />
+                      <option value="Clothing" />
+                      <option value="Grocery" />
+                      <option value="Stationery" />
+                      <option value="Hardware" />
+                      <option value="Cosmetics" />
+                      <option value="Dairy" />
+                    </datalist>
+                  </div>
                   <Input 
                     type="email"
                     label={t('emailAddress')} 

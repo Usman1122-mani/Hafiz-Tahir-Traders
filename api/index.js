@@ -286,9 +286,9 @@ app.delete("/api/products/:id", verifyToken, checkRole(["admin", "manager"]), (r
 
 // ================= SUPPLIERS =================
 app.post("/api/suppliers", verifyToken, checkRole(["admin"]), (req, res) => {
-  const { name, phone, email } = req.body;
-  const sql = "INSERT INTO suppliers (name, phone, email) VALUES (?, ?, ?)";
-  db.query(sql, [name, phone, email], (err) => {
+  const { name, phone, email, service_type } = req.body;
+  const sql = "INSERT INTO suppliers (name, phone, email, service_type) VALUES (?, ?, ?, ?)";
+  db.query(sql, [name, phone, email, service_type || null], (err) => {
     if (err) return res.status(500).send(err);
     res.send("Supplier Added Successfully");
   });
@@ -296,9 +296,9 @@ app.post("/api/suppliers", verifyToken, checkRole(["admin"]), (req, res) => {
 
 // Update Supplier
 app.put("/api/suppliers/:id", verifyToken, checkRole(["admin"]), (req, res) => {
-  const { name, phone, email } = req.body;
-  const sql = "UPDATE suppliers SET name=?, phone=?, email=? WHERE id=?";
-  db.query(sql, [name, phone, email, req.params.id], (err, result) => {
+  const { name, phone, email, service_type } = req.body;
+  const sql = "UPDATE suppliers SET name=?, phone=?, email=?, service_type=? WHERE id=?";
+  db.query(sql, [name, phone, email, service_type || null, req.params.id], (err, result) => {
     if (err) return res.status(500).send(err);
     if (result.affectedRows === 0) return res.status(404).json({ message: "Supplier not found" });
     res.json({ message: "Supplier Updated Successfully" });
