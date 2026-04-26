@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus, Edit2, Trash2, X, Search, Filter, 
+  Plus, Edit2, Trash2, X, Search, 
   Download, TrendingUp, Package, AlertTriangle, 
-  DollarSign, ChevronUp, ChevronDown 
+  DollarSign 
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Table } from '../components/ui/Table';
@@ -25,7 +25,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSize, setFilterSize] = useState('All');
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  const [sortConfig] = useState({ key: 'name', direction: 'asc' });
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -101,13 +101,7 @@ const Products = () => {
 
   const sizes = ['All', ...new Set(products.map(p => p.size).filter(Boolean))];
 
-  const requestSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
+
 
   const openModal = (product = null) => {
     if (product) {
