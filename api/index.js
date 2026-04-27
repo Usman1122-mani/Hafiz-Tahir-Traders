@@ -182,19 +182,26 @@ app.post("/api/products", verifyToken, checkRole(["admin", "manager"]), (req, re
   console.log("Received product data:", req.body);
   const { name, size, buyPrice, sellPrice, stock, lowStockLimit } = req.body;
 
-  // Validation using == null to not reject 0 or empty strings incorrectly
-  if (name == null || size == null || buyPrice == null || sellPrice == null || stock == null || lowStockLimit == null) {
+  // Require all fields
+  if (
+    name == null || name === '' ||
+    size == null || size === '' ||
+    buyPrice == null ||
+    sellPrice == null ||
+    stock == null ||
+    lowStockLimit == null
+  ) {
     return res.status(400).json({ error: "All fields are required: name, size, buyPrice, sellPrice, stock, lowStockLimit" });
   }
 
-  // Convert to numbers
+  // Convert & validate numbers
   const bPrice = Number(buyPrice);
   const sPrice = Number(sellPrice);
   const qty = Number(stock);
   const lowLimit = Number(lowStockLimit);
 
   if (isNaN(bPrice) || isNaN(sPrice) || isNaN(qty) || isNaN(lowLimit)) {
-    return res.status(400).json({ error: "Numeric fields must be valid numbers" });
+    return res.status(400).json({ error: "Numeric fields (buyPrice, sellPrice, stock, lowStockLimit) must be valid numbers" });
   }
 
   if (bPrice > sPrice) {
@@ -202,16 +209,17 @@ app.post("/api/products", verifyToken, checkRole(["admin", "manager"]), (req, re
   }
 
   if (qty < 0 || lowLimit < 0) {
-    return res.status(400).json({ error: "stock and lowStockLimit must be greater than or equal to 0" });
+    return res.status(400).json({ error: "stock and lowStockLimit must be 0 or greater" });
   }
 
+  // Map camelCase → snake_case DB columns
   const sql = "INSERT INTO products (name, size, buy_price, sell_price, stock, low_stock_limit) VALUES (?, ?, ?, ?, ?, ?)";
-  db.query(sql, [name, size, bPrice, sPrice, qty, lowLimit], (err) => {
+  db.query(sql, [name.trim(), size.trim(), bPrice, sPrice, qty, lowLimit], (err, result) => {
     if (err) {
-      console.error("Database error during product insertion:", err);
+      console.error("❌ Database error during product insertion:", err);
       return res.status(500).json({ error: "Database error", details: err.message });
     }
-    res.status(201).json({ message: "Product Added Successfully" });
+    res.status(201).json({ message: "Product Added Successfully", id: result.insertId });
   });
 });
 
@@ -244,16 +252,20 @@ app.post("/api/products/bulk", verifyToken, checkRole(["admin", "manager"]), (re
 // Allow cashier to see products
 app.get("/api/products", verifyToken, checkRole(["admin", "manager", "cashier"]), (req, res) => {
   const sql = `
-    SELECT 
-      *,
-      (sell_price - buy_price) AS profit_per_unit,
+    SELECT
+      id, name, size, buy_price, sell_price, stock, low_stock_limit,
+      (sell_price - buy_price)          AS profit_per_unit,
       ((sell_price - buy_price) * stock) AS total_profit,
-      CASE WHEN stock <= low_stock_limit THEN 'Low Stock' ELSE 'In Stock' END AS stock_status
+      CASE
+        WHEN stock <= low_stock_limit THEN 'Low Stock'
+        ELSE 'In Stock'
+      END AS stock_status
     FROM products
+    ORDER BY id ASC
   `;
   db.query(sql, (err, result) => {
     if (err) {
-      console.error("Database error during product retrieval:", err);
+      console.error("❌ Database error during product retrieval:", err);
       return res.status(500).json({ error: "Database error", details: err.message });
     }
     res.json(result);
@@ -262,14 +274,37 @@ app.get("/api/products", verifyToken, checkRole(["admin", "manager", "cashier"])
 
 // Update Product
 app.put("/api/products/:id", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  const { name, price, sell_price, buy_price, size, stock, quantity, category_id, supplier_id, min_stock, low_stock_limit } = req.body;
-  const s_price = sell_price !== undefined ? sell_price : price;
-  const qty = stock !== undefined ? stock : quantity;
-  const lowLimit = low_stock_limit !== undefined ? low_stock_limit : min_stock;
-  
-  const sql = "UPDATE products SET name=?, size=?, buy_price=?, sell_price=?, stock=?, low_stock_limit=?, category_id=?, supplier_id=? WHERE id=?";
-  db.query(sql, [name, size, buy_price || 0, s_price || 0, qty || 0, lowLimit || 10, category_id || null, supplier_id || null, req.params.id], (err, result) => {
-    if (err) return res.status(500).send(err);
+  // Accept both camelCase (frontend) and snake_case (legacy) field names
+  const {
+    name,
+    size,
+    buyPrice, buy_price,
+    sellPrice, sell_price,
+    stock,
+    lowStockLimit, low_stock_limit
+  } = req.body;
+
+  const bPrice    = Number(buyPrice  ?? buy_price  ?? 0);
+  const sPrice    = Number(sellPrice ?? sell_price ?? 0);
+  const qty       = Number(stock ?? 0);
+  const lowLimit  = Number(lowStockLimit ?? low_stock_limit ?? 10);
+
+  if (!name || !size) {
+    return res.status(400).json({ error: "name and size are required" });
+  }
+  if (isNaN(bPrice) || isNaN(sPrice) || isNaN(qty) || isNaN(lowLimit)) {
+    return res.status(400).json({ error: "Numeric fields must be valid numbers" });
+  }
+  if (bPrice > sPrice) {
+    return res.status(400).json({ error: "buyPrice must be less than or equal to sellPrice" });
+  }
+
+  const sql = "UPDATE products SET name=?, size=?, buy_price=?, sell_price=?, stock=?, low_stock_limit=? WHERE id=?";
+  db.query(sql, [name.trim(), size.trim(), bPrice, sPrice, qty, lowLimit, req.params.id], (err, result) => {
+    if (err) {
+      console.error("❌ Database error during product update:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
     if (result.affectedRows === 0) return res.status(404).json({ message: "Product not found" });
     res.json({ message: "Product Updated Successfully" });
   });
@@ -286,20 +321,39 @@ app.delete("/api/products/:id", verifyToken, checkRole(["admin", "manager"]), (r
 
 // ================= SUPPLIERS =================
 app.post("/api/suppliers", verifyToken, checkRole(["admin"]), (req, res) => {
-  const { name, phone, email, service_type } = req.body;
+  // Accept camelCase serviceType OR legacy snake_case service_type
+  const { name, phone, email, serviceType, service_type } = req.body;
+  const svcType = serviceType || service_type || null;
+
+  if (!name || !phone || !svcType) {
+    return res.status(400).json({ error: "name, phone, and serviceType are required" });
+  }
+
   const sql = "INSERT INTO suppliers (name, phone, email, service_type) VALUES (?, ?, ?, ?)";
-  db.query(sql, [name, phone, email, service_type || null], (err) => {
-    if (err) return res.status(500).send(err);
-    res.send("Supplier Added Successfully");
+  db.query(sql, [name.trim(), phone.trim(), email || null, svcType.trim()], (err, result) => {
+    if (err) {
+      console.error("❌ Database error during supplier insertion:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
+    res.status(201).json({ message: "Supplier Added Successfully", id: result.insertId });
   });
 });
 
 // Update Supplier
 app.put("/api/suppliers/:id", verifyToken, checkRole(["admin"]), (req, res) => {
-  const { name, phone, email, service_type } = req.body;
+  const { name, phone, email, serviceType, service_type } = req.body;
+  const svcType = serviceType || service_type || null;
+
+  if (!name || !phone || !svcType) {
+    return res.status(400).json({ error: "name, phone, and serviceType are required" });
+  }
+
   const sql = "UPDATE suppliers SET name=?, phone=?, email=?, service_type=? WHERE id=?";
-  db.query(sql, [name, phone, email, service_type || null, req.params.id], (err, result) => {
-    if (err) return res.status(500).send(err);
+  db.query(sql, [name.trim(), phone.trim(), email || null, svcType.trim(), req.params.id], (err, result) => {
+    if (err) {
+      console.error("❌ Database error during supplier update:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
     if (result.affectedRows === 0) return res.status(404).json({ message: "Supplier not found" });
     res.json({ message: "Supplier Updated Successfully" });
   });
@@ -369,36 +423,82 @@ app.get("/api/customers", verifyToken, checkRole(["admin", "cashier", "manager"]
 });
 
 // ================= PURCHASES (STOCK IN) =================
-// Get all purchases with product name and supplier name via JOIN
+// Get all purchases with product name, supplier name, and total_cost via JOIN
 app.get("/api/purchases", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
   const sql = `
-    SELECT p.id, p.product_id, pr.name AS product_name, s.name AS supplier_name, p.quantity, p.price, p.unit_price, p.purchase_date
+    SELECT
+      p.id,
+      p.product_id,
+      pr.name  AS product_name,
+      p.supplier_id,
+      s.name   AS supplier_name,
+      p.unit_price,
+      p.quantity,
+      p.total_cost,
+      p.purchase_date
     FROM purchases p
-    LEFT JOIN products pr ON p.product_id = pr.id
-    LEFT JOIN suppliers s ON p.supplier_id = s.id
+    LEFT JOIN products  pr ON p.product_id  = pr.id
+    LEFT JOIN suppliers s  ON p.supplier_id = s.id
     ORDER BY p.purchase_date DESC, p.id DESC
   `;
   db.query(sql, (err, result) => {
-    if (err) return res.status(500).send(err);
+    if (err) {
+      console.error("❌ Database error fetching purchases:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
     res.json(result);
   });
 });
 
 // Record a new purchase and update product stock
 app.post("/api/purchases", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  const { productId, supplierId, quantity, unitPrice, cost } = req.body;
-  if (!productId || !supplierId || !quantity || !unitPrice) {
-    return res.status(400).json({ message: "Product, Supplier, Quantity, and Unit Price are required" });
+  // Accept both camelCase (frontend) and snake_case field names
+  const {
+    productId,  product_id,
+    supplierId, supplier_id,
+    unitPrice,  unit_price,
+    quantity
+  } = req.body;
+
+  const pid   = productId  || product_id;
+  const sid   = supplierId || supplier_id;
+  const uPrice = Number(unitPrice ?? unit_price);
+  const qty   = Number(quantity);
+
+  // Validation
+  if (!pid || !sid || !unitPrice || !quantity) {
+    return res.status(400).json({ error: "product_id, supplier_id, unitPrice, and quantity are all required" });
   }
+  if (isNaN(uPrice) || uPrice <= 0) {
+    return res.status(400).json({ error: "unitPrice must be a positive number" });
+  }
+  if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) {
+    return res.status(400).json({ error: "quantity must be a positive whole number" });
+  }
+
+  // Calculate total cost server-side — never trust the client value
+  const totalCost = parseFloat((uPrice * qty).toFixed(2));
   const purchaseDate = new Date().toISOString().split('T')[0];
-  const sql = "INSERT INTO purchases (product_id, supplier_id, quantity, unit_price, price, purchase_date) VALUES (?, ?, ?, ?, ?, ?)";
-  db.query(sql, [productId, supplierId, quantity, unitPrice, cost || 0, purchaseDate], (err) => {
-    if (err) return res.status(500).send(err);
-    // Also update product stock
+
+  const sql = "INSERT INTO purchases (product_id, supplier_id, unit_price, quantity, total_cost, purchase_date) VALUES (?, ?, ?, ?, ?, ?)";
+  db.query(sql, [pid, sid, uPrice, qty, totalCost, purchaseDate], (err, result) => {
+    if (err) {
+      console.error("❌ Database error during purchase insert:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
+
+    // Update product stock after successful insert
     const updateSql = "UPDATE products SET stock = stock + ? WHERE id = ?";
-    db.query(updateSql, [quantity, productId], (err2) => {
-      if (err2) console.error("Stock update failed:", err2);
-      res.json({ message: "Purchase recorded and stock updated successfully" });
+    db.query(updateSql, [qty, pid], (err2) => {
+      if (err2) {
+        console.error("❌ Stock update failed after purchase insert:", err2);
+        // Purchase was recorded — log the error but don't fail the response
+      }
+      res.status(201).json({
+        message: "Purchase recorded and stock updated successfully",
+        id: result.insertId,
+        total_cost: totalCost
+      });
     });
   });
 });
@@ -406,7 +506,10 @@ app.post("/api/purchases", verifyToken, checkRole(["admin", "manager"]), (req, r
 // Delete a purchase
 app.delete("/api/purchases/:id", verifyToken, checkRole(["admin"]), (req, res) => {
   db.query("DELETE FROM purchases WHERE id=?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).send(err);
+    if (err) {
+      console.error("❌ Database error during purchase delete:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
     if (result.affectedRows === 0) return res.status(404).json({ message: "Purchase not found" });
     res.json({ message: "Purchase deleted successfully" });
   });
