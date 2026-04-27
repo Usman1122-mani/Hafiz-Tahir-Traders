@@ -369,12 +369,13 @@ app.get("/api/customers", verifyToken, checkRole(["admin", "cashier", "manager"]
 });
 
 // ================= PURCHASES (STOCK IN) =================
-// Get all purchases with product name via JOIN
+// Get all purchases with product name and supplier name via JOIN
 app.get("/api/purchases", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
   const sql = `
-    SELECT p.id, p.product_id, pr.name AS product_name, p.quantity, p.price, p.purchase_date
+    SELECT p.id, p.product_id, pr.name AS product_name, s.name AS supplier_name, p.quantity, p.price, p.unit_price, p.purchase_date
     FROM purchases p
     LEFT JOIN products pr ON p.product_id = pr.id
+    LEFT JOIN suppliers s ON p.supplier_id = s.id
     ORDER BY p.purchase_date DESC, p.id DESC
   `;
   db.query(sql, (err, result) => {
@@ -385,13 +386,13 @@ app.get("/api/purchases", verifyToken, checkRole(["admin", "manager"]), (req, re
 
 // Record a new purchase and update product stock
 app.post("/api/purchases", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
-  const { productId, quantity, cost } = req.body;
-  if (!productId || !quantity) {
-    return res.status(400).json({ message: "Product and Quantity are required" });
+  const { productId, supplierId, quantity, unitPrice, cost } = req.body;
+  if (!productId || !supplierId || !quantity || !unitPrice) {
+    return res.status(400).json({ message: "Product, Supplier, Quantity, and Unit Price are required" });
   }
   const purchaseDate = new Date().toISOString().split('T')[0];
-  const sql = "INSERT INTO purchases (product_id, quantity, price, purchase_date) VALUES (?, ?, ?, ?)";
-  db.query(sql, [productId, quantity, cost || 0, purchaseDate], (err) => {
+  const sql = "INSERT INTO purchases (product_id, supplier_id, quantity, unit_price, price, purchase_date) VALUES (?, ?, ?, ?, ?, ?)";
+  db.query(sql, [productId, supplierId, quantity, unitPrice, cost || 0, purchaseDate], (err) => {
     if (err) return res.status(500).send(err);
     // Also update product stock
     const updateSql = "UPDATE products SET stock = stock + ? WHERE id = ?";

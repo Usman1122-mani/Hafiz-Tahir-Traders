@@ -15,21 +15,24 @@ const Purchases = () => {
   const { t } = useTranslation();
   const [purchases, setPurchases] = useState([]);
   const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ productId: '', quantity: '', cost: '' });
+  const [formData, setFormData] = useState({ productId: '', supplierId: '', quantity: '', unitPrice: '', cost: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [purchRes, prodRes] = await Promise.all([
+      const [purchRes, prodRes, suppRes] = await Promise.all([
         api.get('/purchases').catch(() => ({ data: [] })),
-        api.get('/products').catch(() => ({ data: [] }))
+        api.get('/products').catch(() => ({ data: [] })),
+        api.get('/suppliers').catch(() => ({ data: [] }))
       ]);
       setPurchases(Array.isArray(purchRes.data) ? purchRes.data : []);
       setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
+      setSuppliers(Array.isArray(suppRes.data) ? suppRes.data : []);
     } catch (err) {
       toast.error('Failed to load data');
     } finally {
@@ -41,10 +44,17 @@ const Purchases = () => {
     fetchData();
   }, []);
 
+  // Auto-calculate Total Cost
+  useEffect(() => {
+    const qty = parseFloat(formData.quantity) || 0;
+    const price = parseFloat(formData.unitPrice) || 0;
+    setFormData(prev => ({ ...prev, cost: (qty * price).toFixed(2) }));
+  }, [formData.quantity, formData.unitPrice]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.productId || !formData.quantity) {
-      toast.warning('Product and Quantity are required');
+    if (!formData.productId || !formData.supplierId || !formData.quantity || !formData.unitPrice) {
+      toast.warning('All fields are required');
       return;
     }
     setSubmitting(true);
@@ -52,7 +62,7 @@ const Purchases = () => {
       await api.post('/purchases', formData);
       toast.success('Stock purchase recorded successfully');
       setIsModalOpen(false);
-      setFormData({ productId: '', quantity: '', cost: '' });
+      setFormData({ productId: '', supplierId: '', quantity: '', unitPrice: '', cost: '' });
       fetchData();
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to record purchase');
@@ -78,6 +88,10 @@ const Purchases = () => {
     { 
       header: t('product'), 
       cell: (row) => row.product_name || `Product #${row.product_id}` || '-'
+    },
+    { 
+      header: t('supplier'), 
+      cell: (row) => row.supplier_name || '-'
     },
     { header: t('qtyAdded'), accessor: 'quantity' },
     { 
@@ -136,6 +150,7 @@ const Purchases = () => {
                       className="input-field" 
                       value={formData.productId}
                       onChange={e => setFormData({...formData, productId: e.target.value})}
+                      required
                     >
                       <option value="">{t('chooseRestock')}</option>
                       {products.map(p => (
@@ -143,18 +158,51 @@ const Purchases = () => {
                       ))}
                     </select>
                   </div>
-                  <Input 
-                    type="number"
-                    label={t('quantityToAdd')} 
-                    value={formData.quantity} 
-                    onChange={e => setFormData({...formData, quantity: e.target.value})} 
-                  />
+
+                  <div className="input-wrapper">
+                    <label className="input-label">{t('selectSupplier')} *</label>
+                    <select 
+                      className="input-field" 
+                      value={formData.supplierId}
+                      onChange={e => setFormData({...formData, supplierId: e.target.value})}
+                      required
+                    >
+                      <option value="">{t('chooseSupplier')}</option>
+                      {suppliers.map(s => (
+                        <option key={s.id || s._id} value={s.id || s._id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <Input 
+                      type="number"
+                      label={t('unitBuyPrice')} 
+                      value={formData.unitPrice} 
+                      onChange={e => setFormData({...formData, unitPrice: e.target.value})} 
+                      required
+                      min="0"
+                      step="0.01"
+                    />
+                    <Input 
+                      type="number"
+                      label={t('quantityToAdd')} 
+                      value={formData.quantity} 
+                      onChange={e => setFormData({...formData, quantity: e.target.value})} 
+                      required
+                      min="1"
+                    />
+                  </div>
+
                   <Input 
                     type="number"
                     label={t('totalCost')} 
                     value={formData.cost} 
-                    onChange={e => setFormData({...formData, cost: e.target.value})} 
+                    readOnly
+                    className="bg-gray-100 cursor-not-allowed"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.05)', opacity: 0.8 }}
                   />
+
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                     <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>{t('cancel')}</Button>
                     <Button type="submit" isLoading={submitting}>{t('submitPurchase')}</Button>
