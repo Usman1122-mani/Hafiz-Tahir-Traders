@@ -50,17 +50,28 @@ const Dashboard = () => {
         const sales = Array.isArray(salesRes.data) ? salesRes.data : [];
 
         const lowStockProducts = products.filter(
-          (p) => (p.quantity !== undefined ? p.quantity : p.stock) < 10
+          (p) => (p.stock !== undefined ? p.stock : p.quantity) <= (p.low_stock_limit || 10)
         );
         const totalRev = sales.reduce(
           (acc, sale) => acc + Number(sale.total || sale.amount || 0),
           0
         );
 
-        // Simulate weekly sales split for chart
+        // ── Real weekly bucketing based on sale_date ──────────────────────
+        // Week 1: day 1–7  | Week 2: day 8–14 | Week 3: day 15–21 | Week 4: day 22+
+        const now       = new Date();
+        const thisYear  = now.getFullYear();
+        const thisMonth = now.getMonth(); // 0-indexed
+
         const weekSales = [0, 0, 0, 0];
-        sales.forEach((sale, i) => {
-          weekSales[i % 4] += Number(sale.total || sale.amount || 0);
+        sales.forEach((sale) => {
+          if (!sale.sale_date && !sale.date) return; // skip if no date
+          const saleDate = new Date(sale.sale_date || sale.date);
+          // Only include sales from the current month
+          if (saleDate.getFullYear() !== thisYear || saleDate.getMonth() !== thisMonth) return;
+          const day     = saleDate.getDate(); // 1–31
+          const weekIdx = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3;
+          weekSales[weekIdx] += Number(sale.total || sale.amount || 0);
         });
 
         setStats({
