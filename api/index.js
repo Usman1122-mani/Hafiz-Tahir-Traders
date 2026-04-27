@@ -313,7 +313,10 @@ app.put("/api/products/:id", verifyToken, checkRole(["admin", "manager"]), (req,
 // Delete Product
 app.delete("/api/products/:id", verifyToken, checkRole(["admin", "manager"]), (req, res) => {
   db.query("DELETE FROM products WHERE id=?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).send(err);
+    if (err) {
+      console.error("❌ Database error during product delete:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
     if (result.affectedRows === 0) return res.status(404).json({ message: "Product not found" });
     res.json({ message: "Product Deleted Successfully" });
   });
@@ -362,16 +365,22 @@ app.put("/api/suppliers/:id", verifyToken, checkRole(["admin"]), (req, res) => {
 // Delete Supplier
 app.delete("/api/suppliers/:id", verifyToken, checkRole(["admin"]), (req, res) => {
   db.query("DELETE FROM suppliers WHERE id=?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).send(err);
+    if (err) {
+      console.error("❌ Database error during supplier delete:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
     if (result.affectedRows === 0) return res.status(404).json({ message: "Supplier not found" });
     res.json({ message: "Supplier Deleted Successfully" });
   });
 });
 
-// Allow cashier to see suppliers
+// GET all suppliers
 app.get("/api/suppliers", verifyToken, checkRole(["admin", "manager", "cashier"]), (req, res) => {
-  db.query("SELECT * FROM suppliers", (err, result) => {
-    if (err) return res.status(500).send(err);
+  db.query("SELECT id, name, phone, email, service_type FROM suppliers ORDER BY id ASC", (err, result) => {
+    if (err) {
+      console.error("❌ Database error fetching suppliers:", err);
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
     res.json(result);
   });
 });
@@ -465,9 +474,9 @@ app.post("/api/purchases", verifyToken, checkRole(["admin", "manager"]), (req, r
   const uPrice = Number(unitPrice ?? unit_price);
   const qty   = Number(quantity);
 
-  // Validation
-  if (!pid || !sid || !unitPrice || !quantity) {
-    return res.status(400).json({ error: "product_id, supplier_id, unitPrice, and quantity are all required" });
+  // Validation — use parsed numbers, not raw strings
+  if (!pid || !sid) {
+    return res.status(400).json({ error: "product_id and supplier_id are required" });
   }
   if (isNaN(uPrice) || uPrice <= 0) {
     return res.status(400).json({ error: "unitPrice must be a positive number" });
