@@ -716,11 +716,11 @@ const Products = () => {
                         <tr key={i}>
                           <td>{row.name}</td>
                           <td>{row.size}</td>
-                          <td>{row.buy_price}</td>
-                          <td>{row.sell_price}</td>
+                          <td>{row.buyPrice}</td>
+                          <td>{row.sellPrice}</td>
                           <td>{row.stock}</td>
-                          <td style={{ color: row.sell_price - row.buy_price >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                            {(row.sell_price - row.buy_price).toLocaleString()}
+                          <td style={{ color: row.sellPrice - row.buyPrice >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                            {(row.sellPrice - row.buyPrice).toLocaleString()}
                           </td>
                         </tr>
                       ))}

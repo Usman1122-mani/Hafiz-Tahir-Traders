@@ -162,9 +162,14 @@ const Sales = () => {
 
     setSubmitting(true);
     try {
+      // Build local date string so the stored date matches the user's actual day
+      // (toISOString() would shift to UTC, which for UTC+5 can be the wrong date)
+      const saleNow = new Date();
+      const localSaleDate = `${saleNow.getFullYear()}-${String(saleNow.getMonth() + 1).padStart(2, '0')}-${String(saleNow.getDate()).padStart(2, '0')} ${String(saleNow.getHours()).padStart(2, '0')}:${String(saleNow.getMinutes()).padStart(2, '0')}:${String(saleNow.getSeconds()).padStart(2, '0')}`;
+
       await api.post('/sales', {
         customer_id: selectedCustomer || null,
-        sale_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        sale_date: localSaleDate,
         total: cartTotal,
         payment_type: paymentMethod,
         paid_amount: finalPaidAmount

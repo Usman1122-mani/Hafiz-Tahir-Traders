@@ -65,12 +65,36 @@ const Dashboard = () => {
 
         const weekSales = [0, 0, 0, 0];
         sales.forEach((sale) => {
-          if (!sale.sale_date && !sale.date) return; // skip if no date
-          const saleDate = new Date(sale.sale_date || sale.date);
-          // Only include sales from the current month
-          if (saleDate.getFullYear() !== thisYear || saleDate.getMonth() !== thisMonth) return;
-          const day     = saleDate.getDate(); // 1–31
-          const weekIdx = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3;
+          const rawDate = sale.sale_date || sale.date;
+          if (!rawDate) return; // skip if no date
+
+          // Normalize: extract YYYY-MM-DD regardless of whether rawDate
+          // is a Date object, ISO string, or "YYYY-MM-DD HH:MM:SS" string.
+          // This avoids UTC-vs-local timezone shifts that can move a date
+          // to a different day/month.
+          let dateStr;
+          if (rawDate instanceof Date) {
+            // MySQL driver may return a Date object in UTC — use UTC methods
+            const y = rawDate.getUTCFullYear();
+            const m = rawDate.getUTCMonth(); // 0-indexed
+            const d = rawDate.getUTCDate();
+            if (y !== thisYear || m !== thisMonth) return;
+            const weekIdx = d <= 7 ? 0 : d <= 14 ? 1 : d <= 21 ? 2 : 3;
+            weekSales[weekIdx] += Number(sale.total || sale.amount || 0);
+            return;
+          } else {
+            // String like "2026-04-01 10:30:00" or "2026-04-01T10:30:00.000Z"
+            dateStr = String(rawDate).substring(0, 10); // "YYYY-MM-DD"
+          }
+
+          const parts = dateStr.split('-');
+          if (parts.length < 3) return;
+          const saleYear  = parseInt(parts[0], 10);
+          const saleMonth = parseInt(parts[1], 10) - 1; // convert to 0-indexed
+          const saleDay   = parseInt(parts[2], 10);
+
+          if (saleYear !== thisYear || saleMonth !== thisMonth) return;
+          const weekIdx = saleDay <= 7 ? 0 : saleDay <= 14 ? 1 : saleDay <= 21 ? 2 : 3;
           weekSales[weekIdx] += Number(sale.total || sale.amount || 0);
         });
 
