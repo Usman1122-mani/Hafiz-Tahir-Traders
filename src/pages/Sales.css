@@ -864,43 +864,44 @@
 }
 
 @media print {
+  /* Set page size for thermal printer width with auto height */
   @page {
     size: 80mm auto;
     margin: 0;
   }
   
-  body {
-    margin: 0;
-    padding: 0;
-    height: auto;
+  /* Reset body and html for printing */
+  html, body {
     width: 80mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  body * {
-    visibility: hidden;
-    height: 0;
-    overflow: hidden;
+  /* Hide everything marked no-print */
+  .no-print, 
+  .no-print * {
+    display: none !important;
   }
 
   #receipt, #receipt * {
-    visibility: visible;
-    height: auto;
-    overflow: visible;
+    display: block;
+    visibility: visible !important;
   }
 
   #receipt {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    padding: 2mm;
+    position: static !important; /* CRITICAL: Remove absolute positioning */
+    width: 100% !important;
+    padding: 2mm !important;
+    margin: 0 !important;
     font-family: 'Courier New', Courier, monospace;
     color: #000;
     background: #fff;
     font-size: 9pt;
     line-height: 1.2;
-    z-index: 9999;
   }
 
   .print-header {
@@ -908,6 +909,7 @@
     margin-bottom: 3mm;
     border-bottom: 0.5px dashed #000;
     padding-bottom: 2mm;
+    break-inside: avoid; /* Don't split the header */
   }
 
   .print-header h2 {
@@ -927,20 +929,24 @@
     font-size: 8pt;
     border-bottom: 0.5px dashed #000;
     padding-bottom: 2mm;
+    break-inside: avoid;
   }
 
   .print-details div {
-    display: flex;
-    justify-content: space-between;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
   }
 
   .print-items {
     width: 100%;
     margin-bottom: 2mm;
+    display: block !important;
   }
 
   .print-item-header {
-    display: flex;
+    display: flex !important;
+    flex-direction: row !important;
     font-weight: bold;
     border-bottom: 0.5px solid #000;
     margin-bottom: 1.5mm;
@@ -950,11 +956,13 @@
   }
 
   .print-item {
-    display: flex;
-    justify-content: space-between;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
     margin-bottom: 1mm;
     font-size: 8pt;
     align-items: flex-start;
+    break-inside: avoid; /* Individual items shouldn't split */
   }
 
   .print-item span:first-child {
@@ -977,11 +985,13 @@
     margin-top: 2mm;
     border-top: 0.5px dashed #000;
     padding-top: 2mm;
+    break-inside: avoid; /* Keep totals together */
   }
 
   .print-total-row {
-    display: flex;
-    justify-content: space-between;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
     margin-bottom: 0.5mm;
     font-size: 8pt;
   }
@@ -1000,6 +1010,7 @@
     font-size: 8pt;
     padding-top: 2mm;
     border-top: 0.5px dashed #000;
+    break-inside: avoid; /* Keep footer together */
   }
 
   .print-footer p {
@@ -1010,3 +1021,4 @@
     display: none !important;
   }
 }
+
