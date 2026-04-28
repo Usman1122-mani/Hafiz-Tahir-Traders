@@ -734,11 +734,16 @@
 
 .pos-modal-content {
   background: white;
-  width: 450px;
+  width: 500px;
+  max-width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   font-family: 'Inter', sans-serif;
+  overflow: hidden;
 }
 
 .mod-title {
@@ -764,6 +769,19 @@
   margin-bottom: 20px;
   border-bottom: 1px solid #e2e8f0;
   padding-bottom: 12px;
+  overflow-y: auto;
+  flex: 1;
+  max-height: 400px;
+  padding-right: 8px;
+}
+
+.mod-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mod-items::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
 }
 
 .mod-header {
@@ -869,141 +887,62 @@
     margin: 0;
   }
   
-  body {
-    margin: 0;
-    padding: 0;
-    height: auto;
-    width: 80mm;
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
   }
 
+  /* Hide ALL UI elements */
   body * {
-    visibility: hidden;
-    height: 0;
-    overflow: hidden;
+    visibility: hidden !important;
   }
 
+  /* Show ONLY the receipt and its children */
   #receipt, #receipt * {
-    visibility: visible;
-    height: auto;
-    overflow: visible;
+    visibility: visible !important;
   }
 
   #receipt {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    padding: 2mm;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    padding: 2mm !important;
+    margin: 0 !important;
+    background: white !important;
     font-family: 'Courier New', Courier, monospace;
-    color: #000;
-    background: #fff;
     font-size: 9pt;
-    line-height: 1.2;
-    z-index: 9999;
+    color: #000;
   }
 
-  .print-header {
-    text-align: center;
-    margin-bottom: 3mm;
-    border-bottom: 0.5px dashed #000;
-    padding-bottom: 2mm;
+  /* Ensure long bills continue to next pages */
+  #receipt {
+    position: static !important; /* Overriding absolute for multi-page flow */
+    float: none !important;
   }
 
-  .print-header h2 {
-    margin: 0 0 1mm 0;
-    font-size: 11pt;
-    text-transform: uppercase;
-    font-weight: bold;
-  }
-
-  .print-header p {
-    margin: 0;
-    font-size: 8pt;
-  }
-
-  .print-details {
-    margin: 2mm 0;
-    font-size: 8pt;
-    border-bottom: 0.5px dashed #000;
-    padding-bottom: 2mm;
-  }
-
-  .print-details div {
-    display: flex;
-    justify-content: space-between;
+  .print-header,
+  .print-details,
+  .print-total-section,
+  .print-footer {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   .print-items {
-    width: 100%;
-    margin-bottom: 2mm;
-  }
-
-  .print-item-header {
-    display: flex;
-    font-weight: bold;
-    border-bottom: 0.5px solid #000;
-    margin-bottom: 1.5mm;
-    padding-bottom: 0.5mm;
-    font-size: 8pt;
-    text-transform: uppercase;
+    display: block !important;
+    width: 100% !important;
+    break-inside: auto !important;
   }
 
   .print-item {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1mm;
-    font-size: 8pt;
-    align-items: flex-start;
-  }
-
-  .print-item span:first-child {
-    flex: 2.5;
-    word-break: break-all;
-    padding-right: 2mm;
-  }
-
-  .print-item span:nth-child(2) {
-    flex: 1;
-    text-align: center;
-  }
-
-  .print-item span:last-child {
-    flex: 1.5;
-    text-align: right;
-  }
-
-  .print-total-section {
-    margin-top: 2mm;
-    border-top: 0.5px dashed #000;
-    padding-top: 2mm;
-  }
-
-  .print-total-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5mm;
-    font-size: 8pt;
-  }
-
-  .print-grand-total {
-    font-size: 10pt;
-    font-weight: bold;
-    border-top: 0.5px solid #000;
-    margin-top: 1.5mm;
-    padding-top: 1.5mm;
-  }
-
-  .print-footer {
-    text-align: center;
-    margin-top: 4mm;
-    font-size: 8pt;
-    padding-top: 2mm;
-    border-top: 0.5px dashed #000;
-  }
-
-  .print-footer p {
-    margin: 1mm 0;
+    display: flex !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   .no-print {
