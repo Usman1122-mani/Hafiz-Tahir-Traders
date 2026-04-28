@@ -57,31 +57,37 @@ const Dashboard = () => {
           0
         );
 
-        // ── Real weekly bucketing based on sale_date ──────────────────────
-        // Week 1: day 1–7  | Week 2: day 8–14 | Week 3: day 15–21 | Week 4: day 22+
-        const now       = new Date();
-        const thisYear  = now.getFullYear();
-        const thisMonth = now.getMonth() + 1; // 1-indexed for string comparison
+        // ── Rolling 4-week bucketing based on sale_date ─────────────────
+        // Week 1: 28–22 days ago | Week 2: 21–15 days ago
+        // Week 3: 14–8 days ago  | Week 4: last 7 days (this week)
+        const now = new Date();
+        // Strip time so "today" counts as day 0
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         const weekSales = [0, 0, 0, 0];
         sales.forEach((sale) => {
           const rawDate = sale.sale_date || sale.date;
           if (!rawDate) return; // skip if no date
 
-          // sale_date comes as a plain string like "2026-04-05 10:30:00"
-          // or "2026-04-05T10:30:00.000Z" — extract YYYY-MM-DD portion
+          // sale_date comes as "2026-04-05 10:30:00" or ISO — parse YYYY-MM-DD
           const dateStr = String(rawDate).substring(0, 10); // "YYYY-MM-DD"
           const parts = dateStr.split('-');
           if (parts.length < 3) return;
 
-          const saleYear  = parseInt(parts[0], 10);
-          const saleMonth = parseInt(parts[1], 10); // 1-indexed from string
-          const saleDay   = parseInt(parts[2], 10);
+          const saleDate = new Date(
+            parseInt(parts[0], 10),
+            parseInt(parts[1], 10) - 1, // JS months are 0-indexed
+            parseInt(parts[2], 10)
+          );
 
-          // Only include sales from the current month
-          if (saleYear !== thisYear || saleMonth !== thisMonth) return;
+          // How many days ago was this sale?
+          const daysAgo = Math.floor((today - saleDate) / (1000 * 60 * 60 * 24));
 
-          const weekIdx = saleDay <= 7 ? 0 : saleDay <= 14 ? 1 : saleDay <= 21 ? 2 : 3;
+          // Only include sales from the last 28 days
+          if (daysAgo < 0 || daysAgo >= 28) return;
+
+          // Bucket: 0-6 days ago = Week 4, 7-13 = Week 3, 14-20 = Week 2, 21-27 = Week 1
+          const weekIdx = daysAgo < 7 ? 3 : daysAgo < 14 ? 2 : daysAgo < 21 ? 1 : 0;
           weekSales[weekIdx] += Number(sale.total || sale.amount || 0);
         });
 
