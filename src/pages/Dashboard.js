@@ -61,39 +61,26 @@ const Dashboard = () => {
         // Week 1: day 1–7  | Week 2: day 8–14 | Week 3: day 15–21 | Week 4: day 22+
         const now       = new Date();
         const thisYear  = now.getFullYear();
-        const thisMonth = now.getMonth(); // 0-indexed
+        const thisMonth = now.getMonth() + 1; // 1-indexed for string comparison
 
         const weekSales = [0, 0, 0, 0];
         sales.forEach((sale) => {
           const rawDate = sale.sale_date || sale.date;
           if (!rawDate) return; // skip if no date
 
-          // Normalize: extract YYYY-MM-DD regardless of whether rawDate
-          // is a Date object, ISO string, or "YYYY-MM-DD HH:MM:SS" string.
-          // This avoids UTC-vs-local timezone shifts that can move a date
-          // to a different day/month.
-          let dateStr;
-          if (rawDate instanceof Date) {
-            // MySQL driver may return a Date object in UTC — use UTC methods
-            const y = rawDate.getUTCFullYear();
-            const m = rawDate.getUTCMonth(); // 0-indexed
-            const d = rawDate.getUTCDate();
-            if (y !== thisYear || m !== thisMonth) return;
-            const weekIdx = d <= 7 ? 0 : d <= 14 ? 1 : d <= 21 ? 2 : 3;
-            weekSales[weekIdx] += Number(sale.total || sale.amount || 0);
-            return;
-          } else {
-            // String like "2026-04-01 10:30:00" or "2026-04-01T10:30:00.000Z"
-            dateStr = String(rawDate).substring(0, 10); // "YYYY-MM-DD"
-          }
-
+          // sale_date comes as a plain string like "2026-04-05 10:30:00"
+          // or "2026-04-05T10:30:00.000Z" — extract YYYY-MM-DD portion
+          const dateStr = String(rawDate).substring(0, 10); // "YYYY-MM-DD"
           const parts = dateStr.split('-');
           if (parts.length < 3) return;
+
           const saleYear  = parseInt(parts[0], 10);
-          const saleMonth = parseInt(parts[1], 10) - 1; // convert to 0-indexed
+          const saleMonth = parseInt(parts[1], 10); // 1-indexed from string
           const saleDay   = parseInt(parts[2], 10);
 
+          // Only include sales from the current month
           if (saleYear !== thisYear || saleMonth !== thisMonth) return;
+
           const weekIdx = saleDay <= 7 ? 0 : saleDay <= 14 ? 1 : saleDay <= 21 ? 2 : 3;
           weekSales[weekIdx] += Number(sale.total || sale.amount || 0);
         });

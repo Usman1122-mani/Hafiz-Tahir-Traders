@@ -19,6 +19,10 @@ const dbConfig = {
   connectTimeout:     20000,   // 20 s per connection attempt
   enableKeepAlive:    true,
   keepAliveInitialDelay: 10000,
+
+  // Return DATE/DATETIME as plain strings, not JS Date objects.
+  // This prevents timezone shifts during JSON serialization.
+  dateStrings: true,
 };
 
 // ─── Guard: refuse localhost / missing host ────────────────────────────────

@@ -566,7 +566,15 @@ app.post("/api/sales", verifyToken, checkRole(["admin", "cashier"]), (req, res) 
 });
 
 app.get("/api/sales", verifyToken, checkRole(["admin", "cashier", "manager"]), (req, res) => {
-  db.query("SELECT * FROM sales ORDER BY id DESC", (err, result) => {
+  // Use DATE_FORMAT so sale_date comes back as a plain string,
+  // not a JS Date object that JSON.stringify would shift to UTC.
+  const sql = `
+    SELECT id, customer_id,
+           DATE_FORMAT(sale_date, '%Y-%m-%d %H:%i:%s') AS sale_date,
+           total, paid_amount, remaining_amount, payment_type, status
+    FROM sales ORDER BY id DESC
+  `;
+  db.query(sql, (err, result) => {
     if (err) return res.status(500).send(err);
     res.json(result);
   });
