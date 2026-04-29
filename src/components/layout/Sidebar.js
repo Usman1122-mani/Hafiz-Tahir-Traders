@@ -33,7 +33,7 @@ const Sidebar = () => {
   );
 
   return (
-    <div className="sidebar">
+    <div className="sidebar no-print">
       <div className="sidebar-header">
         <h2 className="brand-logo">
           Hafiz Tahir <span className="accent">Traders</span>
