@@ -884,14 +884,14 @@
 
 @media print {
   @page {
-    size: 85.6mm 54mm;
+    size: 85.6mm auto;
     margin: 0;
   }
   
   html, body {
-    height: 54mm !important;
+    height: auto !important;
     width: 85.6mm !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
@@ -909,21 +909,18 @@
 
   #receipt {
     display: block !important;
-    position: absolute !important;
-    top: 0;
-    left: 0;
+    position: static !important;
     width: 85.6mm !important;
-    height: 54mm !important;
-    padding: 2mm !important;
+    height: auto !important;
+    padding: 4mm !important;
     margin: 0 !important;
     background: white !important;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 7pt;
+    font-size: 10pt;
     color: #000;
-    line-height: 1.1;
-    overflow: hidden;
+    line-height: 1.2;
+    overflow: visible;
     box-sizing: border-box;
-    transform-origin: top left;
   }
 
   .print-header {
@@ -932,12 +929,13 @@
   }
 
   .receipt-brand {
-    font-size: 10pt;
+    font-size: 14pt;
     font-weight: bold;
     margin: 0;
     padding: 0;
     text-transform: uppercase;
     letter-spacing: 1px;
+    text-align: center;
   }
 
   .receipt-subtitle, .receipt-contact {
@@ -952,8 +950,8 @@
   }
 
   .receipt-info {
-    margin: 4px 0;
-    font-size: 7.5pt;
+    margin: 10px 0;
+    font-size: 10pt;
   }
 
   .receipt-row {
@@ -965,18 +963,19 @@
 
   .receipt-table-header {
     font-weight: bold;
-    border-bottom: none;
-    margin-bottom: 2px;
-    font-size: 8pt;
+    border-bottom: 2px solid #000;
+    margin-bottom: 5px;
+    padding-bottom: 2px;
+    font-size: 10pt;
   }
 
   .receipt-items {
-    margin: 4px 0;
+    margin: 10px 0;
   }
 
   .receipt-item {
-    font-size: 7.5pt;
-    margin-bottom: 2px;
+    font-size: 10pt;
+    margin-bottom: 4px;
   }
 
   .receipt-item span:first-child {
@@ -986,27 +985,28 @@
   }
 
   .receipt-totals {
-    margin-top: 4px;
-    padding-top: 2px;
+    margin-top: 10px;
+    padding-top: 5px;
   }
 
   .receipt-totals .receipt-row {
-    font-size: 8pt;
+    font-size: 11pt;
   }
 
   .receipt-grand-total {
-    font-size: 9.5pt;
+    font-size: 13pt;
     font-weight: bold;
-    margin-top: 4px;
-    padding-top: 4px;
-    border-top: 1px solid #000;
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 2px solid #000;
   }
 
   .receipt-footer {
     text-align: center;
-    margin-top: 6px;
-    font-size: 7.5pt;
-    padding-top: 4px;
+    margin-top: 20px;
+    font-size: 10pt;
+    padding-top: 10px;
+    border-top: 1px dashed #000;
   }
 
   .receipt-footer p {
