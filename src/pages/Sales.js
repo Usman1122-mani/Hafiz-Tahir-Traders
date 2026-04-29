@@ -477,15 +477,15 @@ const Sales = () => {
 
         <div className="receipt-items">
           <div className="receipt-row receipt-table-header">
-            <span style={{ flex: 3 }}>ITEM</span>
-            <span style={{ flex: 1, textAlign: 'center' }}>QTY</span>
-            <span style={{ flex: 1, textAlign: 'right' }}>PRICE</span>
+            <span className="col-item">ITEM</span>
+            <span className="col-qty" style={{ textAlign: 'center' }}>QTY</span>
+            <span className="col-price" style={{ textAlign: 'right' }}>PRICE</span>
           </div>
           {cart.map((item, idx) => (
             <div key={idx} className="receipt-row receipt-item">
-              <span style={{ flex: 3 }}>{item.name} {item.size ? `(${item.size})` : ''}</span>
-              <span style={{ flex: 1, textAlign: 'center' }}>{item.cartQty}</span>
-              <span style={{ flex: 1, textAlign: 'right' }}>{((item.sell_price || 0) * item.cartQty).toLocaleString()}</span>
+              <span className="col-item">{item.name} {item.size ? `(${item.size})` : ''}</span>
+              <span className="col-qty" style={{ textAlign: 'center' }}>{item.cartQty}</span>
+              <span className="col-price" style={{ textAlign: 'right' }}>{((item.sell_price || 0) * item.cartQty).toLocaleString()}</span>
             </div>
           ))}
         </div>
