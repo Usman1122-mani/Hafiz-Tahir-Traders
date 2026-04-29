@@ -206,10 +206,38 @@ const Sales = () => {
   };
 
   const handlePrint = () => {
-    if (cart.length === 0) {
-      return;
+    if (cart.length === 0) return;
+
+    const receipt = document.getElementById('receipt');
+    if (receipt) {
+      // Temporarily make it visible to measure (but it's still display:none in CSS usually)
+      // We need to ensure it's "measureable".
+      receipt.style.display = 'block';
+      receipt.style.transform = 'scale(1)';
+      
+      // 54mm is approx 204px at 96dpi (1mm = 3.78px)
+      // But better to use a ratio if we can.
+      // Let's use a target height in pixels.
+      const targetHeightPx = 54 * 3.78; 
+      const actualHeight = receipt.scrollHeight;
+
+      if (actualHeight > targetHeightPx) {
+        const scale = targetHeightPx / actualHeight;
+        receipt.style.transform = `scale(${scale})`;
+      } else {
+        receipt.style.transform = 'scale(1)';
+      }
     }
+
     window.print();
+
+    // Reset after printing (optional, but good for consistency)
+    if (receipt) {
+      setTimeout(() => {
+        receipt.style.display = 'none';
+        receipt.style.transform = 'scale(1)';
+      }, 1000);
+    }
   };
 
   if (loading) return <Loader />;
@@ -446,7 +474,7 @@ const Sales = () => {
           <p className="receipt-contact">Contact: 0321-1234567</p>
         </div>
 
-        <div className="receipt-divider">------------------------------------------</div>
+        <div className="receipt-divider"></div>
 
         <div className="receipt-info">
           <div className="receipt-row">
@@ -463,7 +491,7 @@ const Sales = () => {
           </div>
         </div>
 
-        <div className="receipt-divider">------------------------------------------</div>
+        <div className="receipt-divider"></div>
 
         <div className="receipt-items">
           <div className="receipt-row receipt-table-header">
@@ -480,7 +508,7 @@ const Sales = () => {
           ))}
         </div>
 
-        <div className="receipt-divider">------------------------------------------</div>
+        <div className="receipt-divider"></div>
 
         <div className="receipt-totals">
           <div className="receipt-row">
@@ -499,7 +527,7 @@ const Sales = () => {
           </div>
         </div>
 
-        <div className="receipt-divider">------------------------------------------</div>
+        <div className="receipt-divider"></div>
 
         <div className="receipt-footer">
           <p>Thank You</p>
