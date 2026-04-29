@@ -958,7 +958,7 @@
     padding: 2mm 1mm !important;
     background: white !important;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 8.5pt;
+    font-size: 6.5pt;
     color: #000;
     line-height: 1.2;
     overflow: hidden !important;
@@ -977,7 +977,7 @@
   }
 
   .receipt-brand {
-    font-size: 11pt;
+    font-size: 8pt;
     font-weight: bold;
     margin: 0;
     padding: 0;
@@ -988,7 +988,7 @@
 
   .receipt-subtitle,
   .receipt-contact {
-    font-size: 7.5pt;
+    font-size: 6pt;
     text-align: center;
     margin: 1px 0;
   }
@@ -1001,7 +1001,7 @@
 
   .receipt-info {
     margin: 5px 0;
-    font-size: 8.5pt;
+    font-size: 6.5pt;
   }
 
   .receipt-row {
@@ -1018,7 +1018,7 @@
     border-bottom: 1px solid #000;
     margin-bottom: 3px;
     padding-bottom: 2px;
-    font-size: 8.5pt;
+    font-size: 6.5pt;
     width: 100% !important;
   }
 
@@ -1028,7 +1028,7 @@
   }
 
   .receipt-item {
-    font-size: 8.5pt;
+    font-size: 6.5pt;
     margin-bottom: 3px;
     width: 100% !important;
   }
@@ -1056,11 +1056,11 @@
   }
 
   .receipt-totals .receipt-row {
-    font-size: 8.5pt;
+    font-size: 6.5pt;
   }
 
   .receipt-grand-total {
-    font-size: 10pt;
+    font-size: 7.5pt;
     font-weight: bold;
     margin-top: 3px;
     padding-top: 3px;
@@ -1070,7 +1070,7 @@
   .receipt-footer {
     text-align: center;
     margin-top: 10px;
-    font-size: 8.5pt;
+    font-size: 6.5pt;
     padding-top: 5px;
     border-top: 1px dashed #000;
   }
