@@ -441,70 +441,69 @@ const Sales = () => {
       {/* --- Print Only Receipt Component --- */}
       <div id="receipt">
         <div className="print-header">
-          <h2>Hafiz Tahir Traders</h2>
-          <p>Inventory Management System</p>
-          <p>Contact: 0321-1234567</p>
+          <h1 className="receipt-brand">HAFIZ TAHIR TRADERS</h1>
+          <p className="receipt-subtitle">Inventory Management System</p>
+          <p className="receipt-contact">Contact: 0321-1234567</p>
         </div>
 
-        <div className="print-details">
-          <div><span>Date:</span> <span>{new Date().toLocaleString()}</span></div>
-          <div><span>Payment:</span> <span>{paymentMethod}</span></div>
-          <div><span>Customer:</span> <span>{selectedCustomer ? customers.find(c => (c.id || c._id)?.toString() === selectedCustomer)?.name : 'Walk-in Customer'}</span></div>
+        <div className="receipt-divider">------------------------------------------</div>
+
+        <div className="receipt-info">
+          <div className="receipt-row">
+            <span>Date:</span>
+            <span>{new Date().toLocaleString()}</span>
+          </div>
+          <div className="receipt-row">
+            <span>Payment:</span>
+            <span>{paymentMethod}</span>
+          </div>
+          <div className="receipt-row">
+            <span>Customer:</span>
+            <span>{selectedCustomer ? customers.find(c => (c.id || c._id)?.toString() === selectedCustomer)?.name : 'Walk-in Customer'}</span>
+          </div>
         </div>
 
-        <div className="print-items">
-          <div className="print-item-header">
-            <span style={{flex: 2}}>Item</span>
-            <span style={{flex: 1, textAlign: 'center'}}>Qty</span>
-            <span style={{flex: 1, textAlign: 'right'}}>Price</span>
+        <div className="receipt-divider">------------------------------------------</div>
+
+        <div className="receipt-items">
+          <div className="receipt-row receipt-table-header">
+            <span style={{ flex: 3 }}>ITEM</span>
+            <span style={{ flex: 1, textAlign: 'center' }}>QTY</span>
+            <span style={{ flex: 1, textAlign: 'right' }}>PRICE</span>
           </div>
           {cart.map((item, idx) => (
-            <div key={idx} className="print-item">
-              <span style={{flex: 2}}>{item.name} {item.size ? `(${item.size})` : ''}</span>
-              <span style={{flex: 1, textAlign: 'center'}}>{item.cartQty}</span>
-              <span style={{flex: 1, textAlign: 'right'}}>{((item.sell_price || 0) * item.cartQty).toLocaleString()}</span>
+            <div key={idx} className="receipt-row receipt-item">
+              <span style={{ flex: 3 }}>{item.name} {item.size ? `(${item.size})` : ''}</span>
+              <span style={{ flex: 1, textAlign: 'center' }}>{item.cartQty}</span>
+              <span style={{ flex: 1, textAlign: 'right' }}>{((item.sell_price || 0) * item.cartQty).toLocaleString()}</span>
             </div>
           ))}
         </div>
 
-        <div className="print-total-section">
-          <div className="print-total-row">
+        <div className="receipt-divider">------------------------------------------</div>
+
+        <div className="receipt-totals">
+          <div className="receipt-row">
             <span>Subtotal:</span>
             <span>Rs. {subtotal.toLocaleString()}</span>
           </div>
           {discountAmount > 0 && (
-            <div className="print-total-row">
+            <div className="receipt-row">
               <span>Discount ({discountType === 'percentage' ? `${discountValue}%` : 'Fixed'}):</span>
               <span>- Rs. {discountAmount.toLocaleString()}</span>
             </div>
           )}
-          <div className="print-total-row print-grand-total">
+          <div className="receipt-row receipt-grand-total">
             <span>TOTAL:</span>
             <span>Rs. {cartTotal.toLocaleString()}</span>
           </div>
-          {paymentMethod === 'Partial' && (
-            <>
-              <div className="print-total-row">
-                <span>Paid Amount:</span>
-                <span>Rs. {Number(manualPaidAmount || 0).toLocaleString()}</span>
-              </div>
-              <div className="print-total-row">
-                <span>Remaining Due:</span>
-                <span>Rs. {Math.max(0, cartTotal - Number(manualPaidAmount || 0)).toLocaleString()}</span>
-              </div>
-            </>
-          )}
-          {paymentMethod === 'Credit' && (
-            <div className="print-total-row">
-              <span>Amount Due:</span>
-              <span>Rs. {cartTotal.toLocaleString()}</span>
-            </div>
-          )}
         </div>
 
-        <div className="print-footer">
+        <div className="receipt-divider">------------------------------------------</div>
+
+        <div className="receipt-footer">
           <p>Thank You</p>
-          <p>Developed by mani digital</p>
+          <p style={{fontSize: '7pt', marginTop: '5px'}}>Developed by Mani Digital</p>
         </div>
       </div>
     </>
